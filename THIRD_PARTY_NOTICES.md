@@ -6,6 +6,8 @@
 - **p5.brush** 2.2.3 — MIT — https://github.com/acamposuribe/p5.brush
   Copyright (c) 2023-2026 Alejandro Campos Uribe. Its ES-module source is imported unmodified from
   `node_modules/p5.brush/src/`; the full MIT license text is in `node_modules/p5.brush/LICENSE.md`.
+  One method is overridden at runtime in `src/kit/brush.js` (`Position.prototype.isInCanvas`, whose bounds check
+  ignores the transform scale and freezes strokes under zoom); the library files themselves are not modified.
 - **simplex-noise** (dependency of p5.brush) — MIT — Copyright (c) 2018 Jonas Wagner.
 - **puppeteer-core** 25.14.0 — Apache-2.0 — used only by the render tools.
 

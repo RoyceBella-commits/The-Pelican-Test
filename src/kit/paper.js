@@ -141,8 +141,10 @@ export function sheet(opts) {
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, w, h);
   }
-  cache.set(key, g);
-  return g;
+  const img = g.get();          // frozen p5.Image (has .canvas); uploads to the GPU once
+  g.remove();
+  cache.set(key, img);
+  return img;
 }
 
 /** Fill a Canvas2D context region with fbm-modulated colour (used for rock and plaster). */

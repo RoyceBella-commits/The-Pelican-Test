@@ -3,7 +3,7 @@
 //   K.brush            p5.brush namespace (counted)        K.seed(...key)   seed the next marks
 //   K.flush()          composite queued brush marks now (call before native p5 drawing that must go on top)
 //   K.bake(key,w,h,fn) offscreen framebuffer painted once (call from init only)
-//   K.layer(key,w,h,fn) cached Canvas2D layer: fn(ctx2d, g)
+//   K.layer(key,w,h,fn) cached Canvas2D layer: fn(ctx2d, g) → frozen p5.Image
 //   K.text(opts,x,y,scale,alpha)  draw a text sprite;  K.textSprite(opts)
 //   K.paper.sheet(opts) procedural paper/silk/rock ground (p5.Graphics)
 //   K.rig.pose / placed / drawPen      the pelican puppet
@@ -77,15 +77,21 @@ function dropBakes(prefix) {
 }
 
 const layers = new Map();
-/** Cached Canvas2D layer (p5.Graphics). paint(ctx, g) runs once. */
+/**
+ * Cached Canvas2D layer. paint(ctx, g) runs once; returns a frozen p5.Image
+ * (has .canvas) so its texture uploads once — drawing a p5.Graphics with image()
+ * re-uploads it on every call.
+ */
 function layer(key, w, h, paint) {
   if (!key.includes(':')) key = `${state.scenePrefix}:${key}`;
   if (layers.has(key)) return layers.get(key);
   const g = createGraphics(Math.round(w), Math.round(h));
   g.pixelDensity(1);
   paint(g.drawingContext, g);
-  layers.set(key, g);
-  return g;
+  const img = g.get();
+  g.remove();
+  layers.set(key, img);
+  return img;
 }
 
 export const K = {

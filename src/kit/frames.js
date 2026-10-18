@@ -225,8 +225,10 @@ export function frameSprite(style, iw = 1000, ih = 1000) {
   const ctx = g.drawingContext;
   ctx.clearRect(0, 0, W, H);
   (PAINTERS[style] || PAINTERS.wood)(ctx, W, H, F, rng(hash('frame', style, iw, ih)));
-  cache.set(key, g);
-  return g;
+  const img = g.get();          // frozen: the texture uploads once
+  g.remove();
+  cache.set(key, img);
+  return img;
 }
 
 /** Draw a frame ring around interior (x, y, iw, ih) in the current (world) transform. */

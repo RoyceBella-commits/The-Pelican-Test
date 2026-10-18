@@ -9,7 +9,7 @@ const MAX = 300;
  * opts: { text, font, size, weight, style, color, align ('left'|'center'|'right'),
  *         lineHeight (×size), maxWidth, letterSpacing (px), stroke, strokeWidth,
  *         shadow: {color, blur, x, y}, vertical (CJK top-to-bottom columns), pad }
- * Returns { g, w, h, ax, ay } where (ax, ay) is the anchor offset for align/baseline.
+ * Returns { g (p5.Graphics), img (frozen p5.Image, draw this), w, h, ax, ay } — (ax, ay) is the anchor offset.
  */
 export function textSprite(opts) {
   const key = JSON.stringify(opts);
@@ -22,6 +22,7 @@ export function textSprite(opts) {
     const o = cache.get(oldest);
     cache.delete(oldest);
     try { o.g.remove(); } catch {}
+    o.img = null;
   }
   return hit;
 }
@@ -87,7 +88,9 @@ function build(o) {
   }
   const align = o.align || 'left';
   const ax = align === 'center' ? w / 2 : align === 'right' ? w - pad : pad;
-  return { g, w, h, ax, ay: pad, pad };
+  // a frozen p5.Image uploads its texture once; drawing a p5.Graphics re-uploads it every call
+  const img = g.get();
+  return { g, img, w, h, ax, ay: pad, pad };
 }
 
 /**
@@ -99,7 +102,7 @@ export function drawText(opts, x, y, scale = 1, alpha = 1) {
   push();
   if (alpha < 1) tint(255, 255 * alpha);
   imageMode(CORNER);
-  image(s.g, x - s.ax * scale, y - s.ay * scale, s.w * scale, s.h * scale);
+  image(s.img || s.g, x - s.ax * scale, y - s.ay * scale, s.w * scale, s.h * scale);
   pop();
   return s;
 }
