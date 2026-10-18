@@ -17,6 +17,7 @@ import * as paper from './paper.js';
 import * as frames from './frames.js';
 import * as rigMod from '../rig/pelican.js';
 import { drawPen } from '../rig/pen.js';
+import { rigParts, BIRD_FILL_ROLES } from '../rig/parts.js';
 import * as TL from '../beat/timeline.js';
 
 // ------------------------------------------------------------------ bakes (LRU)
@@ -93,7 +94,7 @@ export const K = {
   bake, dropBakes, layer,
   text: drawText, textSprite,
   paper, frames,
-  rig: { ...rigMod, drawPen },
+  rig: { ...rigMod, drawPen, parts: rigParts, BIRD_FILL_ROLES },
   TL,
   _state: state,
   bakeBytes: () => total,

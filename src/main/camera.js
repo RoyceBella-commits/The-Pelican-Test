@@ -13,7 +13,7 @@ import { smootherstep, lerp } from '../kit/math.js';
 
 const HALF = 0.6;    // follow window half-width (s)
 const NS = 13;
-export const INTRO_CAM = { cx: introLeft() + INTRO_W / 2, cy: CAMERA_Y, z: 1.13 };
+export const INTRO_CAM = { cx: introLeft() + INTRO_W / 2, cy: CAMERA_Y, z: 1.16 };
 
 export function followX(t, scenes) {
   let s = 0, ws = 0;

@@ -243,9 +243,9 @@ export class Film {
       for (const j of vis) {
         const x = this.leftOf(j), w = this.widthOf(j);
         fill(255, 240, 215, 10);
-        rect(x - 80, -260, w + 160, 260);
+        rect(x - 60, -260, w + 120, 260 - TL.FRAME_W);
         fill(0, 0, 0, 40);
-        rect(x - 40, TL.PANEL + 40, w + 80, 30);
+        rect(x - TL.FRAME_W, TL.PANEL + TL.FRAME_W, w + 2 * TL.FRAME_W, 24);
       }
     });
   }
@@ -262,7 +262,7 @@ export class Film {
       if (x0 + TL.INTRO_W > v.x0 && x0 < v.x1) {
         this.renderPanel(-1, t, cam, this.fb, W, H, R);
         this.blitInterior(-1, cam, x0, 0, ia);
-        this.withCamera(cam, () => K.frames.drawFrame('paper', x0, 0, TL.INTRO_W, TL.PANEL, ia));
+        this.withCamera(cam, () => K.frames.drawFrame('minimal', x0, 0, TL.INTRO_W, TL.PANEL, ia));
       }
     }
     const placedPanels = [];

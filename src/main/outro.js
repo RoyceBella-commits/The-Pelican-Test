@@ -1,12 +1,12 @@
 // Outro (125–137 s): the scroll pulls back, folds row by row on the beat into a
 // 4×5 museum wall, every panel holding its own era's frozen pelican.
 import {
-  OUTRO_START, DURATION, FPS, PITCH, PANEL, CAMERA_Y, BASE_PX_PER_UNIT, N_SCENES, panelLeft,
+  OUTRO_START, DURATION, FPS, PITCH, PANEL, FRAME_W, CAMERA_Y, BASE_PX_PER_UNIT, N_SCENES, panelLeft,
 } from '../beat/timeline.js';
 import { smoothstep, smootherstep, lerp, easeInOut, easeOutBack, clamp } from '../kit/math.js';
 
 const GP = 1200;                                  // wall pitch (panel + gap)
-const ANCHOR_X = 17 * PITCH + PANEL / 2 + 40;     // centre column = strip position of panel 18
+const ANCHOR_X = 17 * PITCH + PANEL / 2 + FRAME_W; // centre column = strip position of panel 18
 const ROW3_Y = PANEL / 2;                         // bottom row stays at the scroll height
 
 export const T_PULL = OUTRO_START;                // 125: pull back starts

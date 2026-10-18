@@ -1,10 +1,12 @@
-// Museum frame kit. Every frame is a 40-unit ring around a panel interior.
+// Frame kit. Every panel uses the same minimal frame (user decision, stage 2):
+// a thin flat near-black ring with a faint inner hairline. The older ornate
+// styles are kept below but are no longer used by the film.
 // Styles are painted once with Canvas2D into a cached sprite and drawn with
 // the camera transform, so they cost one image() per visible panel.
 import { hash, rng, noise2 } from './math.js';
 import { FRAME_W } from '../beat/timeline.js';
 
-export const STYLES = ['gilt', 'wood', 'darkwood', 'stone', 'mount', 'film', 'monitor', 'phone', 'paper'];
+export const STYLES = ['minimal', 'gilt', 'wood', 'darkwood', 'stone', 'mount', 'film', 'monitor', 'phone', 'paper'];
 const PXU = 1.2;            // sprite pixels per world unit
 const cache = new Map();
 
@@ -43,6 +45,15 @@ function ringClip(ctx, W, H, F) {
 }
 
 const PAINTERS = {
+  minimal(ctx, W, H, F) {
+    ctx.fillStyle = '#16130f';
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.rect(F, F, W - 2 * F, H - 2 * F); ctx.fill('evenodd');
+    // faint outer bevel + inner hairline
+    ctx.strokeStyle = 'rgba(255,240,220,0.10)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(0.75, 0.75, W - 1.5, H - 1.5);
+    ctx.strokeStyle = 'rgba(255,240,220,0.22)'; ctx.lineWidth = 1.2;
+    ctx.strokeRect(F - 0.6, F - 0.6, W - 2 * F + 1.2, H - 2 * F + 1.2);
+  },
   gilt(ctx, W, H, F, r) {
     band(ctx, W, H, F, 0, 0.12, '#5a3d12', 0.3);
     band(ctx, W, H, F, 0.12, 0.38, '#c9a14a', 0.35);
@@ -220,7 +231,7 @@ export function frameSprite(style, iw = 1000, ih = 1000) {
 
 /** Draw a frame ring around interior (x, y, iw, ih) in the current (world) transform. */
 export function drawFrame(style, x, y, iw = 1000, ih = 1000, alpha = 1) {
-  const g = frameSprite(style, iw, ih);
+  const g = frameSprite('minimal', iw, ih);   // uniform minimal frames everywhere
   push();
   if (alpha < 1) tint(255, 255 * alpha);
   imageMode(CORNER);

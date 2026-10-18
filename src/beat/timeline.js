@@ -35,14 +35,15 @@ export const barPhase = (t) => ((((t - DOWNBEAT0) / BAR) % 1) + 1) % 1;
 export const isDownbeat = (t) => Math.abs(((t - DOWNBEAT0) / BAR) - Math.round((t - DOWNBEAT0) / BAR)) < 1e-6;
 
 // ---------------------------------------------------------------- geometry
-// World units. Each panel interior is 1000×1000; every panel owns a 40-unit
-// frame; neighbouring frames touch, so panels repeat every PITCH units.
+// World units. Each panel interior is 1000×1000 inside a thin, uniform, minimal
+// frame (FRAME_W per side); neighbouring frames touch, so panels repeat every PITCH units.
 export const PANEL = 1000;
-export const FRAME_W = 40;
-export const PITCH = PANEL + 2 * FRAME_W;   // 1080
+export const FRAME_W = 14;
+export const PITCH = PANEL + 2 * FRAME_W;   // 1028
 export const ROAD_Y = 800;                   // road height at every frame edge (panel units, y down)
-export const SPEED = PITCH / SCENE_DUR;      // 180 units/s, cruising speed
-export const CRANK_DIST = 180;               // one pedal revolution per 180 units = 2 beats at cruising speed
+export const SPEED = PITCH / SCENE_DUR;      // ≈171.3 units/s, cruising speed
+export const CRANK_DIST = SPEED;             // one pedal revolution per second = 2 beats at cruising speed;
+                                             // a panel is exactly 6 revolutions, so the pedals re-lock at every crossing
 export const WHEEL_R = 62;
 
 /** World x of the frame midline the rider crosses at sceneStart(i). */

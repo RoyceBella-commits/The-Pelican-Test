@@ -8,7 +8,7 @@ import { BASE_PX_PER_UNIT } from '../beat/timeline.js';
 export const introScene = {
   id: 'intro',
   index: -1,
-  frame: 'paper',
+  frame: 'minimal',
   width: INTRO_W,
   title: { zh: '序', en: 'Preface' },
   year: { zh: '', en: '' },
