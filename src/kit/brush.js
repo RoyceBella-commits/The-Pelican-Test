@@ -5,6 +5,13 @@
 import * as lib from '/node_modules/p5.brush/src/index.p5.js';
 import { flushActiveComposite } from '/node_modules/p5.brush/src/core/color.js';
 
+// p5.brush 2.2.3 bug workaround (runtime override, library files untouched):
+// Position.isInCanvas() adds the transform's translation to an UNSCALED position,
+// so under a zoomed camera or a high-resolution bake on-screen points are judged
+// "outside" and the stroke stops advancing (every stamp lands on its first point).
+// Our scenes cull off-screen work themselves, so we simply treat every point as inside.
+lib.Position.prototype.isInCanvas = function () { return true; };
+
 export const stats = { strokes: 0, fills: 0, flushes: 0 };
 export function resetStats() { stats.strokes = 0; stats.fills = 0; stats.flushes = 0; }
 
