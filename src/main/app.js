@@ -22,6 +22,7 @@ window.setup = async () => {
   try {
     pixelDensity(1);
     createCanvas(TL.VIEW_W, TL.VIEW_H, WEBGL);
+    pixelDensity(1);           // createCanvas resets density to the display's (2 on Retina): force 1 again
     noLoop();
     brushLib.load();
     brushLib.scaleBrushes(2);
