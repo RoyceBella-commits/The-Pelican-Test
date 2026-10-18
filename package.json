@@ -1,0 +1,19 @@
+{
+  "name": "pelican-test",
+  "version": "0.1.0",
+  "description": "鹈鹕测试 — a procedural p5.js + p5.brush short film: a pelican rides a bicycle through 20 eras of art",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/server.mjs",
+    "shot": "node tools/shot.mjs",
+    "sheet": "node tools/sheet.mjs",
+    "render": "node tools/render.mjs",
+    "check": "node tools/check.mjs"
+  },
+  "dependencies": {
+    "p5": "2.3.4",
+    "p5.brush": "2.2.3",
+    "puppeteer-core": "25.14.0"
+  }
+}

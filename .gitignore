@@ -1,0 +1,9 @@
+node_modules/
+frames/
+frames_draft/
+work/
+out/
+tiles/
+audio/*.wav
+.DS_Store
+._*

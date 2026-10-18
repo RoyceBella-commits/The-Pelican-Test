@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<script>window.addEventListener("error", (e) => { window.__fatal = window.__fatal || ("load error: " + e.message); });</script>
+<title>鹈鹕测试 · 预览</title>
+<style>
+  :root { --bar: #17140f; --ink: #efe6d2; --dim: #9b8f7a; --acc: #e8a33c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0d0b09; color: var(--ink); font: 14px/1.4 "PingFang SC", -apple-system, sans-serif; overflow: hidden; }
+  #stage { position: absolute; inset: 0 0 92px 0; display: flex; align-items: center; justify-content: center; }
+  #frame { position: relative; aspect-ratio: 16 / 9; max-width: 100%; max-height: 100%; width: 100%; background: #000; box-shadow: 0 10px 40px #000a; }
+  #frame canvas, #frame video { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+  #frame video { display: none; }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 16px; }
+  #bar { position: absolute; left: 0; right: 0; bottom: 0; height: 92px; background: var(--bar); border-top: 1px solid #2c261e; padding: 10px 18px; }
+  #scrub { position: relative; height: 26px; cursor: pointer; border-radius: 4px; overflow: hidden; background: #2a241c; }
+  #scrub .seg { position: absolute; top: 0; bottom: 0; opacity: .55; border-right: 1px solid #0006; }
+  #scrub .seg:hover { opacity: .85; }
+  #scrub .head { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #fff; box-shadow: 0 0 6px #fff; pointer-events: none; }
+  #scrub .tip { position: absolute; top: 4px; font-size: 11px; color: #fff; pointer-events: none; white-space: nowrap; text-shadow: 0 1px 2px #000; padding-left: 4px; }
+  #row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  button, select { background: #2a241c; color: var(--ink); border: 1px solid #3b3328; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:hover, select:hover { border-color: var(--acc); }
+  #play { width: 44px; font-size: 16px; }
+  #time { font: 13px Menlo, monospace; color: var(--dim); min-width: 190px; }
+  #scene { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #scene b { font-size: 16px; color: var(--ink); }
+  #scene span { color: var(--dim); margin-left: 8px; }
+  #fps { font: 12px Menlo, monospace; color: var(--dim); min-width: 80px; text-align: right; }
+  label { color: var(--dim); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+</style>
+<script src="/node_modules/p5/lib/p5.min.js"></script>
+<script type="importmap">
+{ "imports": { "simplex-noise": "/node_modules/simplex-noise/dist/esm/simplex-noise.js" } }
+</script>
+</head>
+<body>
+<div id="stage"><div id="frame"><video id="draft" muted playsinline preload="auto"></video><div id="loading">正在准备画面…</div></div></div>
+<div id="bar">
+  <div id="scrub"><div class="head"></div></div>
+  <div id="row">
+    <button id="play" title="播放 / 暂停（空格）">▶</button>
+    <button id="prev" title="上一帧（←，Shift+← 后退 1 秒）">◀︎ 帧</button>
+    <button id="next" title="下一帧（→，Shift+→ 前进 1 秒）">帧 ▶︎</button>
+    <div id="time">00:00.00 · 帧 0</div>
+    <div id="scene"><b>序</b><span>Preface</span></div>
+    <label title="强拍闪烁 + 调试信息"><input type="checkbox" id="beat"> 节拍</label>
+    <select id="mode" title="实时渲染：精确但可能卡顿；流畅播放：播放已渲染的草稿视频">
+      <option value="live">实时渲染</option>
+      <option value="draft">流畅播放（草稿视频）</option>
+    </select>
+    <div id="fps"></div>
+  </div>
+</div>
+<script type="module" src="/src/main/app.js"></script>
+<script type="module" src="/src/main/ui.js"></script>
+</body>
+</html>
