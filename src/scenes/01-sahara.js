@@ -814,39 +814,58 @@ function drawGhosts(x) {
   fig(118, 486, 0.82, 0.22, 'up', 3);
 }
 
+/**
+ * Finger-painted lettering: each glyph is used only as a mask, then re-painted as
+ * overlapping round pigment dabs with jitter and a few dry gaps — the way ochre
+ * applied with a fingertip looks (the erosion pass then sinks it into the rock).
+ */
+function fingerText(x, K, R, text, x0, cy, size, color, o = {}) {
+  const font = o.font || '"Yuanti SC", "PingFang SC", sans-serif';
+  const step = o.step ?? 2.1, rMin = o.rMin ?? 1.8, rVar = o.rVar ?? 1.5, jit = o.jit ?? 1.3, drop = o.drop ?? 0.07;
+  let cx = x0;
+  x.fillStyle = color;
+  for (const ch of text) {
+    if (ch === ' ') { cx += size * 0.28; continue; }
+    const sp = K.textSprite({ text: ch, font, weight: o.weight ?? 700, size: 120, color: '#000' });
+    const src = sp.g.canvas || sp.g.elt;
+    const sc = (size / 120) * (1 + (R() - 0.5) * 0.08);
+    const mw = Math.ceil(sp.w * sc), mh = Math.ceil(sp.h * sc);
+    const m = document.createElement('canvas'); m.width = mw; m.height = mh;
+    const mc = m.getContext('2d'); mc.drawImage(src, 0, 0, mw, mh);
+    const data = mc.getImageData(0, 0, mw, mh).data;
+    const tilt = (R() - 0.5) * 0.08, lift = (R() - 0.5) * size * 0.08;
+    const ox = cx - sp.pad * sc, oy = cy - mh / 2 + lift;
+    for (let yy = 0; yy < mh; yy += step) {
+      for (let xx = 0; xx < mw; xx += step) {
+        if (data[((yy | 0) * mw + (xx | 0)) * 4 + 3] < 120 || R() < drop) continue;
+        const px = ox + xx + (R() - 0.5) * jit + (yy - mh / 2) * tilt;
+        const py = oy + yy + (R() - 0.5) * jit;
+        x.globalAlpha = 0.82 + R() * 0.18;
+        x.beginPath(); x.arc(px, py, rMin + R() * rVar, 0, Math.PI * 2); x.fill();
+      }
+    }
+    x.globalAlpha = 1;
+    const cjk = ch.charCodeAt(0) > 255;
+    cx += (sp.w - 2 * sp.pad) * sc * (cjk ? 1.05 : 1.0) + (cjk ? 3 : 1);
+  }
+  return cx;
+}
+
 function drawTitle(x, K) {
   const R = rng(`${ID}-title`);
-  const glyph = (ch, cx, cy, size, font, weight, color, stroke) => {
-    const sp = K.textSprite({ text: ch, font, weight, size: 200, color, stroke: color, strokeWidth: stroke });
-    const src = sp.g.canvas || sp.g.elt;
-    const sc = (size / 200) * (1 + (R() - 0.5) * 0.07);
-    x.save(); x.translate(cx, cy + (R() - 0.5) * 5); x.rotate((R() - 0.5) * 0.08); x.scale(sc, sc);
-    x.drawImage(src, -sp.w / 2, -sp.h / 2);
-    x.restore();
-    return (sp.w - 2 * sp.pad) * (size / 200);
-  };
-  const CJK = '"Yuanti SC", "PingFang SC", sans-serif';
-  let cx = 50;
-  for (const ch of '撒哈拉岩画') { const w = glyph(ch, cx + 38, 84, 76, CJK, 700, C.red, 4); cx += w * 1.03; }
-  cx = 54;
-  for (const ch of '约公元前 4000 年') {
-    if (ch === ' ') { cx += 9; continue; }
-    const cjk = ch.charCodeAt(0) > 255;
-    const w = glyph(ch, cx + (cjk ? 20 : 11), 154, 40, CJK, 700, C.red2, 3);
-    cx += w * (cjk ? 1.04 : 1.0) + 2;
-  }
+  fingerText(x, K, R, '撒哈拉岩画', 52, 84, 76, C.red, { weight: 500, step: 1.7, rMin: 1.7, rVar: 1.1, jit: 1.1, drop: 0.06 });
+  fingerText(x, K, R, '约公元前 4000 年', 56, 152, 38, C.red2, { weight: 500, step: 1.3, rMin: 1.15, rVar: 0.7, jit: 0.7 });
 }
 
 function drawTitleEn(x, K) {
-  const sp = K.textSprite({ text: 'SAHARAN ROCK ART · c. 4000 BCE', font: 'Optima, "Avenir Next", "Gill Sans", sans-serif', weight: 700, size: 150, color: C.white, stroke: C.white, strokeWidth: 7, letterSpacing: 5 });
-  const src = sp.g.canvas || sp.g.elt;
-  const sc = 28 / 150;
-  x.save(); x.translate(54 - sp.pad * sc, 198 - sp.h * sc / 2); x.rotate(-0.008); x.scale(sc, sc); x.drawImage(src, 0, 0); x.restore();
+  const R = rng(`${ID}-title-en`);
+  fingerText(x, K, R, 'SAHARAN ROCK ART · c. 4000 BCE', 56, 198, 27, C.white,
+    { font: 'Optima, "Avenir Next", "Gill Sans", sans-serif', step: 1.1, rMin: 0.8, rVar: 0.6, jit: 0.6, drop: 0.05 });
 }
 
 function drawHand(x) {
   x.save();
-  x.translate(476, 96); x.rotate(-0.22);
+  x.translate(532, 92); x.rotate(-0.22);
   x.fillStyle = C.red;
   x.beginPath(); pathCR(x, [[-19, -6], [-6, -16], [12, -14], [21, -2], [19, 22], [8, 34], [-10, 33], [-20, 18]]); x.fill();
   const finger = (bx, by, ang, len, w) => { const tip = [bx + Math.sin(ang) * len, by - Math.cos(ang) * len]; x.beginPath(); limbPath(x, limbPoly([[bx, by], tip], [[0, w], [1, w * 0.86]], 2)); x.fill(); };
@@ -959,7 +978,7 @@ function buildAll(K) {
   // the "later inscription": title + handprint
   paintWall([20, 30, 600, 200], (x) => drawTitle(x, K), 2.2, P_TITLE);
   paintWall([20, 170, 620, 230], (x) => drawTitleEn(x, K), 1.5, P_TITLE_W);
-  paintWall([410, 40, 540, 175], drawHand, 2.4, P_HAND);
+  paintWall([470, 36, 600, 175], drawHand, 2.4, P_HAND);
   const wallPx = finishWall();
 
   // sprites for every painted state used in the visibility window

@@ -69,11 +69,22 @@ const FAR_R = smoothLoop(jag([[760, 640], [760, 420], [810, 380], [880, 350], [9
 const KNOLL_L = smoothLoop(jag([[268, 712], [282, 664], [320, 632], [372, 618], [430, 622], [478, 642], [508, 676], [520, 712]], 6, 9), 4);
 const KNOLL_R = smoothLoop(jag([[548, 712], [560, 660], [600, 616], [660, 596], [724, 600], [780, 626], [812, 668], [826, 712]], 6, 11), 4);
 // foreground boulders (behind the road)
-// angular foreground rocks with fold lines (facets)
-const BOULDER_L = jag([[-10, 806], [-10, 650], [18, 612], [62, 596], [96, 584], [128, 598], [150, 622], [184, 640], [206, 690], [214, 744], [204, 806]], 6, 13);
-const BOULDER_R = jag([[800, 806], [792, 742], [808, 690], [832, 650], [866, 624], [896, 604], [934, 598], [968, 612], [1000, 640], [1010, 700], [1010, 806]], 6, 15);
-const FOLDS_L = [[[62, 596], [70, 650], [58, 712], [66, 790]], [[128, 598], [120, 660], [134, 730], [128, 800]], [[184, 640], [170, 700], [180, 770]]];
-const FOLDS_R = [[[866, 624], [858, 690], [872, 760], [864, 800]], [[934, 598], [924, 660], [940, 730], [930, 800]], [[808, 690], [826, 740], [818, 800]]];
+// foreground rock clusters: angular rocks with a light top plane, a shaded side and fold lines (facets)
+function rock(outline, topDepth, shadeFrom, folds) {
+  const top = outline.slice(1, -1);                       // the upper contour (outline runs bottom-left → top → bottom-right)
+  const plane = top.concat(top.slice().reverse().map(([x, y], i) => [x + (i % 2 ? 2 : -2), y + topDepth * (0.6 + 0.4 * Math.sin(i * 1.7))]));
+  return { outline, top, plane, shadeFrom, folds };
+}
+const ROCKS = [
+  rock([[-10, 806], [-10, 628], [22, 598], [64, 582], [104, 590], [130, 614], [138, 654], [126, 706], [114, 806]], 26, 92,
+    [[[64, 584], [58, 640], [70, 700], [62, 790]], [[104, 592], [98, 650], [108, 720]]]),
+  rock([[66, 806], [74, 746], [102, 714], [150, 700], [196, 712], [224, 748], [232, 806]], 18, 170,
+    [[[150, 702], [140, 750], [152, 800]], [[196, 714], [190, 760]]]),
+  rock([[1012, 806], [1012, 622], [980, 598], [934, 586], [892, 602], [870, 638], [864, 700], [878, 806]].reverse(), 26, 960,
+    [[[934, 588], [940, 650], [928, 720], [936, 796]], [[892, 604], [900, 664], [890, 740]]]),
+  rock([[778, 806], [786, 748], [812, 716], [858, 704], [902, 716], [922, 752], [928, 806]], 18, 880,
+    [[[858, 706], [850, 756], [862, 800]], [[812, 718], [820, 770]]]),
+];
 const BANK = [[-20, 804], [1020, 804], [1020, 1020], [-20, 1020]];
 
 // rider path pieces (panel units)
@@ -112,8 +123,8 @@ const KNOLL_TREES = [
   [756, 612, 60, 'leafy', 0.85], [786, 630, 52, 'leafy', 0.8], [808, 652, 42, 'leafy', 0.75],
 ];
 const FG_TREES = [
-  [60, 612, 210, 'pine', 0.95, -0.05, 1.5], [128, 608, 170, 'leafy', 0.9, 0.08, 1.3], [180, 640, 120, 'bare', 0.9, 0.1, 1.1],
-  [846, 616, 230, 'pine', 0.95, 0.04, 1.5], [912, 600, 190, 'leafy', 0.9, -0.06, 1.3], [968, 626, 150, 'bare', 0.9, -0.1, 1.2],
+  [52, 596, 210, 'pine', 0.95, -0.05, 1.5], [112, 600, 165, 'leafy', 0.9, 0.08, 1.3], [178, 710, 120, 'bare', 0.9, 0.1, 1.1],
+  [846, 712, 235, 'pine', 0.95, 0.04, 1.5], [930, 594, 190, 'leafy', 0.9, -0.06, 1.3], [986, 610, 150, 'bare', 0.9, -0.1, 1.2],
 ];
 
 // ------------------------------------------------------------------ painting (static)
@@ -142,11 +153,14 @@ function buildWashes(K) {
   add([[255, 698], [840, 698], [840, 724], [255, 724]], { t: 0.3, alpha: 0.25, soft: 3 });
   add(BANK, { t: 0.38, alpha: 0.45, soft: 4, grad: { y0: 804, y1: 1000, a0: 0.9, a1: 0.35 }, gran: 0.5 });
   add([[150, 862], [850, 856], [880, 1010], [120, 1010]], { t: 0.25, alpha: 0.25, soft: 10 });   // stream (paler)
-  // boulders: overall tone + darker lower/right mass (top facets stay light)
-  for (const poly of [BOULDER_L, BOULDER_R]) {
-    const b = bb(poly);
-    add(poly, { t: 0.72, alpha: 0.55, soft: 2, edge: 0.7, gran: 0.4 });
-    add(poly.map(([x, y]) => [x, Math.max(y, b.y0 + 46)]), { t: 0.92, alpha: 0.45, soft: 3, grad: { x0: b.x0, x1: b.x1, a0: 0.5, a1: 1 }, gran: 0.4 });
+  // rocks: body tone, darker shaded side, then a pale top plane
+  for (const R of ROCKS) {
+    const b = bb(R.outline);
+    add(R.outline, { t: 0.72, alpha: 0.6, soft: 1.5, edge: 0.7, gran: 0.4, grad: { y0: b.y0, y1: b.y1, a0: 0.75, a1: 1 } });
+    const left = R.shadeFrom > (b.x0 + b.x1) / 2;
+    const side = R.outline.map(([x, y]) => [left ? Math.max(x, R.shadeFrom) : Math.min(x, R.shadeFrom), y]);
+    add(side, { t: 0.95, alpha: 0.42, soft: 3, gran: 0.35, grad: left ? { x0: R.shadeFrom, x1: b.x1, a0: 0.4, a1: 1 } : { x0: R.shadeFrom, x1: b.x0, a0: 0.4, a1: 1 } });
+    add(R.plane, { t: 0, alpha: 0.55, soft: 2, ground: '#c9b590' });
   }
   // foliage blobs from the trees (collect-only pass: same random sequence as the strokes)
   const fol = [];
@@ -187,35 +201,31 @@ function paintMassif(K, key, M, o, reg) {
   });
 }
 
-/** Angular rock: bold contour, fold lines, axe-cut strokes hanging off the folds, moss dots on top. */
-function paintBoulder(K, key, poly, folds) {
+/** Angular rock: bold contour, plane edge, fold lines, axe-cut strokes hanging off the folds, moss dots on top. */
+function paintBoulder(K, key, R) {
   const r = rng(hash(ID, key));
-  const top = poly.slice(1, poly.length - 1);
-  ink.line(K, key + ':edge', top, { t: 1, w: 2.2, dry: true, ground: G, curv: 0.15 });
-  folds.forEach((f, k) => ink.line(K, `${key}:fold${k}`, f, { t: 0.95, w: 1.3, dry: true, ground: G, curv: 0.3 }));
-  // axe-cut strokes: short slanting dry strokes that start on a fold/contour and fall to the lower left
-  const lines = [top, ...folds];
+  ink.line(K, key + ':edge', R.outline.slice(0, -1), { t: 1, w: 2.4, dry: true, ground: G, curv: 0.1 });
+  const lower = R.plane.slice(R.top.length);                // the inner edge of the top plane
+  ink.line(K, key + ':plane', lower, { t: 0.9, w: 1.1, dry: true, ground: G, curv: 0.2 });
+  R.folds.forEach((f, k) => ink.line(K, `${key}:fold${k}`, f, { t: 0.95, w: 1.4, dry: true, ground: G, curv: 0.3 }));
   let n = 0;
-  lines.forEach((ln, li) => {
-    const pts = smoothPath(ln, 6);
+  for (const ln of [lower, ...R.folds]) {
+    const pts = smoothPath(ln, 5);
     for (let i = 1; i < pts.length; i += 2) {
       const p = pts[i];
-      if (p[1] > 790) continue;
-      for (let j = 0; j < 2; j++) {
-        const L = 9 + r() * 14, a = Math.PI * (0.6 + r() * 0.12);
-        const q = [p[0] + 3 + r() * 6, p[1] + 2 + r() * 8];
-        K.seed(ID, key, 'axe', n++);
-        K.brush.set('ink.dry', ink.tone(0.75 + r() * 0.25, G), 0.8 + r() * 0.7);
-        K.brush.line(q[0], q[1], q[0] + Math.cos(a) * L, q[1] + Math.sin(a) * L);
-      }
+      if (p[1] > 792) continue;
+      const L = 8 + r() * 13, a = Math.PI * (0.58 + r() * 0.14);
+      const q = [p[0] + 2 + r() * 6, p[1] + 3 + r() * 8];
+      K.seed(ID, key, 'axe', n++);
+      K.brush.set('ink.dry', ink.tone(0.75 + r() * 0.25, G), 0.7 + r() * 0.6);
+      K.brush.line(q[0], q[1], q[0] + Math.cos(a) * L, q[1] + Math.sin(a) * L);
     }
-  });
-  // moss dots (点苔) along the top contour
-  const moss = [];
-  for (let i = 0; i < top.length - 1; i++) for (let j = 0; j < 4; j++) {
-    const f = r(); moss.push([lerp(top[i][0], top[i + 1][0], f) + (r() - 0.5) * 6, lerp(top[i][1], top[i + 1][1], f) - 2 - r() * 6]);
   }
-  ink.dots(K, key + ':moss', moss, { t: 1, size: 3.4, w: 0.7, ground: G, angle: -1.4 });
+  const moss = [];
+  for (let i = 0; i < R.top.length - 1; i++) for (let j = 0; j < 3; j++) {
+    const f = r(); moss.push([lerp(R.top[i][0], R.top[i + 1][0], f) + (r() - 0.5) * 6, lerp(R.top[i][1], R.top[i + 1][1], f) - 1 - r() * 5]);
+  }
+  ink.dots(K, key + ':moss', moss, { t: 1, size: 3.2, w: 0.7, ground: G, angle: -1.4 });
 }
 
 /** Extra texture only seen when the camera pushes in: grass tufts and pebbles along the far track. */
@@ -296,10 +306,7 @@ function paintPainting(K, reg) {
     }
   }
   // foreground boulders, bank, stream
-  for (const [key, poly, folds] of [['boulderL', BOULDER_L, FOLDS_L], ['boulderR', BOULDER_R, FOLDS_R]]) {
-    if (!inRegion(bb(poly), reg)) continue;
-    paintBoulder(K, key, poly, folds);
-  }
+  ROCKS.forEach((R, k) => { if (inRegion(bb(R.outline), reg)) paintBoulder(K, `rock${k}`, R); });
   if (inRegion({ x0: 0, x1: 1000, y0: 800, y1: 1000 }, reg)) {
     ink.line(K, 'roadEdge', [[-10, 806], [250, 809], [520, 805], [780, 809], [1010, 806]], { t: 0.65, w: 0.9, dry: true, ground: G });
     const rr = rng(hash(ID, 'water'));
