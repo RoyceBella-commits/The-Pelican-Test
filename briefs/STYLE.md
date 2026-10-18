@@ -99,14 +99,24 @@ it fits naturally; year/era required. It must be legible at 1080p (≥ 26 px on 
 - `K.bake(key, w, h, paint)` → framebuffer, painted once (only from `init()`). `paint(K, w, h)` draws in pixel units,
   top-left origin. Draw it with `image(fb, x, y, w, h)` in panel units. Budget ≤ 64 MB per scene (2048² = 16 MB).
   Bake at ≥ 2 px/unit if the camera will zoom in.
-- `K.layer(key, w, h, (ctx2d, g) => …)` → cached Canvas2D layer (gradients, pixel noise, text effects).
+- `K.layer(key, w, h, (ctx2d, g) => …)` → cached Canvas2D layer, returned as a frozen p5.Image (its `.canvas` is
+  readable). Drawing a *p5.Graphics* with `image()` re-uploads its texture every call — for anything static use
+  `K.layer` or `K.bake`; for per-frame Canvas2D rasters keep one reusable graphics and accept the upload.
 - `K.text(opts, x, y, scale, alpha)` — text sprite: `{ text, font, size, weight, style, color, align, letterSpacing,
   vertical (CJK columns), stroke, strokeWidth, shadow }`; `size` in sprite px, `scale` maps px → panel units.
+  `K.textSprite(opts)` → `{ g, img, w, h, … }` (`g.canvas` gives the raw Canvas2D for masks/erosion).
   macOS fonts available: "Songti SC", "Kaiti SC", "Libian SC", "Xingkai SC", "Baoli SC", "Hannotate SC", "Yuanti SC",
   "PingFang SC", "Hiragino Sans GB", YuMincho, "Hiragino Mincho ProN", Baskerville, "Hoefler Text", Didot, "Bodoni 72",
   Menlo, "Courier New", Georgia, Copperplate, Papyrus, Trattatello, "Apple Chancery", Herculanum, "Marker Felt", "Chalkboard SE".
 - `K.paper.sheet({ w, h, base, kind: 'paper'|'xuan'|'silk'|'rock'|'papyrus'|'canvas', grain, fibers, stains, edge, seed })`
-  → procedural ground (p5.Graphics, cached). `K.paper.noiseFill(ctx2d, w, h, {...})`.
+  → procedural ground (frozen p5.Image, cached). `K.paper.noiseFill(ctx2d, w, h, {...})`.
+- **Ink kit** (`import * as ink from '../kit/ink.js'`, call `ink.init(K)` in `init`): ink brushes `ink.wet / ink.dry /
+  ink.fine / ink.dab`, `ink.tone(t, ground)`, `ink.line`, `ink.flat`, Canvas2D wash layers `ink.washLayer` (soft edges,
+  pooling, granulation — far better than p5.brush watercolour for ink), texture strokes `ink.cun` (rain/axe/hemp),
+  `ink.dots`, `ink.tree` (pine/leafy/bare/willow; `collectOnly` gathers foliage washes), `ink.seal`, `ink.silk`, `ink.blob`.
+  Custom brushes are NOT affected by `scaleBrushes` — their weights are final.
+- Canvas2D is a first-class technique: rasterising shapes in a 2D canvas (with masks, erosion, dithering) and drawing
+  the result is fine whenever it serves the style better than p5.brush.
 - Maths (deterministic): `K.rng(seed)` (`.range .int .pick .gauss`), `K.rand(...key)`, `K.hash`, `K.noise2`, `K.fbm`,
   `K.smoothstep`, `K.smootherstep`, `K.lerp`, `K.clamp`, `K.keys(t, [[t,v],...])`, `K.easeInOut/Out/In/OutBack`,
   `K.window01(a, b, x, ramp)`, `K.pulse`, `K.ribbon(pts, w)`, `K.smoothPath`, `K.smoothLoop`, `K.ellipsePts`, `K.TL` (timeline).
@@ -119,6 +129,17 @@ it fits naturally; year/era required. It must be legible at 1080p (≥ 26 px on 
 - Budget: **≤ 400 live brush marks per frame when your panel is centred**, worst frame (with a neighbour) ≤ 1.5 s.
   `tools/shot.mjs` prints marks and ms per still. Report your max marks.
 - Use `ctx.view` / `ctx.pxu` to skip off-screen or sub-pixel detail.
+
+## 8b. Lessons from the first three panels (reference implementations)
+- `src/scenes/05-song.js` (ink on silk, two bake tiers for a 4× camera push, LOD for a tiny rider),
+  `src/scenes/01-sahara.js` (pigment rasterised and eroded into a rock surface, pose states switching on beats),
+  `src/scenes/19-shorts.js` (crisp vector + UI overlay, camera override, `ctx.riderAt` time-warp for freeze/slow-mo).
+  Read the relevant one before you start; reuse ideas freely (copy helpers into your file — do not import scene files).
+- Titles must look MADE IN THE MEDIUM (brushed, carved, printed, painted…), not like a font laid on top. Use text
+  sprites as shapes/masks and then texture, erode, offset or re-stroke them.
+- Thin p5.brush lines under strong zoom used to collapse into dots; that is fixed in the kit — if you still see it,
+  tell the director instead of working around it.
+- Hide nothing important under the minimal frame: keep 20 units of breathing room inside each edge for text.
 
 ## 9. Workflow
 ```bash
