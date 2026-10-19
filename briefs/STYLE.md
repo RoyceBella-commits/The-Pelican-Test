@@ -140,6 +140,11 @@ it fits naturally; year/era required. It must be legible at 1080p (≥ 26 px on 
 - Thin p5.brush lines under strong zoom used to collapse into dots; that is fixed in the kit — if you still see it,
   tell the director instead of working around it.
 - Hide nothing important under the minimal frame: keep 20 units of breathing room inside each edge for text.
+- p5.brush draws nothing for a curved `spline` with only 2 points — use `line` (or add a midpoint).
+- Every 2D canvas runs on Chrome's CPU raster path (forced for determinism): keep per-frame Canvas2D work modest
+  (small live canvases, no full-panel blurs per frame); bake large static rasters once.
+- Seven panels are finished — study your finished neighbours' seams: `node tools/shot.mjs --seam <id>` shows the real
+  neighbour; match the road and the rider's continuity, not their style.
 
 ## 9. Workflow
 ```bash

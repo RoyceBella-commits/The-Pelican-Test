@@ -47,29 +47,28 @@ export const introScene = {
   },
 };
 
-/** Subtitles of the intro, in the opening camera's screen pixels. */
+/**
+ * Subtitles of the intro, in the opening camera's screen pixels. The first line
+ * fades in over the half-bar pickup; the second lands on the first downbeat (t = 1),
+ * so both are read on a still page before the camera starts moving (t ≈ 2.6).
+ * The two-line block is centred on the sheet.
+ */
 export function drawIntroCaptions(K, t) {
-  const out = 1;
   const ink = 'rgba(38,28,18,1)';
-  const a1 = smoothstep(0.15, 0.75, t) * out;
-  const aSrc = smoothstep(1.0, 1.5, t) * out;
-  const a2 = smoothstep(2.96, 3.12, t) * out;
-  const popS = 1 + 0.06 * (1 - easeOutBack(smoothstep(3.0, 3.35, t)));
+  const a1 = smoothstep(0.08, 0.55, t);
+  const a2 = smoothstep(0.96, 1.1, t);
+  const popS = 1 + 0.06 * (1 - easeOutBack(smoothstep(1.0, 1.35, t)));
   const cx = 960;
   if (a1 > 0) {
-    K.text({ text: '人类自古以来就痴迷于画鹈鹕骑自行车。', font: '"Songti SC", serif', weight: 600, size: 58, color: ink, align: 'center', letterSpacing: 2 }, cx, 300 - 12 * (1 - a1), 1, a1);
-    K.text({ text: 'Since time immemorial, humankind has been obsessed with drawing pelicans riding bicycles.', font: '"Baskerville", serif', style: 'italic', size: 27, color: ink, align: 'center' }, cx, 386 - 12 * (1 - a1), 1, a1 * 0.85);
+    K.text({ text: '人类自古以来就痴迷于画鹈鹕骑自行车。', font: '"Songti SC", serif', weight: 600, size: 58, color: ink, align: 'center', letterSpacing: 2 }, cx, 372 - 12 * (1 - a1), 1, a1);
+    K.text({ text: 'Since time immemorial, humankind has been obsessed with drawing pelicans riding bicycles.', font: '"Baskerville", serif', style: 'italic', size: 27, color: ink, align: 'center' }, cx, 458 - 12 * (1 - a1), 1, a1 * 0.85);
   }
   if (a2 > 0) {
     push();
-    translate(cx, 500);
+    translate(cx, 590);
     scale(popS);
     K.text({ text: '——早在自行车被发明之前。', font: '"Songti SC", serif', weight: 600, size: 52, color: ink, align: 'center', letterSpacing: 2 }, 0, -30, 1, a2);
     K.text({ text: '— long before the bicycle was invented.', font: '"Baskerville", serif', style: 'italic', size: 27, color: ink, align: 'center' }, 0, 46, 1, a2 * 0.85);
     pop();
-  }
-  if (aSrc > 0) {
-    K.text({ text: '——《鹈鹕骑行艺术通史》，卷一', font: '"Songti SC", serif', size: 24, color: 'rgba(60,45,30,0.85)', align: 'right' }, 1500, 640, 1, aSrc);
-    K.text({ text: 'A General History of Pelican Cycling in Art, Vol. I', font: '"Baskerville", serif', style: 'italic', size: 18, color: 'rgba(60,45,30,0.7)', align: 'right' }, 1500, 676, 1, aSrc);
   }
 }
