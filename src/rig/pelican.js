@@ -30,7 +30,7 @@ export const DEFAULT_MODS = {
   wind: 0,          // 0..1 feathers & tail flutter (吴带当风)
   eye: 'normal',    // 'normal' | 'white' (rolled-up white eye) | 'closed' | 'wide'
   billOpen: 0,      // 0..1
-  feetOff: 0,       // 0..1 both feet lift off the pedals (Muybridge)
+  feetOff: 0,       // 0..1 both feet lift off the pedals
   scared: 0,        // 0..1 neck pulls back, eye wide, feathers ruffle
   lookBack: 0,      // 0..1 head turns toward the viewer / back
   bob: 1,           // head/body bob amount

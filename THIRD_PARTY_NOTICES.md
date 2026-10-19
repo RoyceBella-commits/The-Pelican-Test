@@ -34,5 +34,5 @@ project are used here. If any snippet is ever reused, its MIT notice must be add
 
 The panels are original procedural re-imaginings in the *style* of historical art and media. All historical works
 referenced (Tassili rock art, Egyptian tomb painting, Han reliefs, Fan Kuan, Zhang Zeduan, Bada Shanren, Hiroshige,
-Muybridge, Van Gogh, Munch, Méliès, *Nosferatu*, …) are in the public domain. The chat app and short-video app
+Hokusai, Van Gogh, Munch, *Nosferatu*, …) are in the public domain. The chat app and short-video app
 shown in the film are fictional; no real logos, mascots, icons, album covers or notification sounds are used.

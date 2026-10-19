@@ -143,8 +143,15 @@ it fits naturally; year/era required. It must be legible at 1080p (≥ 26 px on 
 - p5.brush draws nothing for a curved `spline` with only 2 points — use `line` (or add a midpoint).
 - Every 2D canvas runs on Chrome's CPU raster path (forced for determinism): keep per-frame Canvas2D work modest
   (small live canvases, no full-panel blurs per frame); bake large static rasters once.
-- Seven panels are finished — study your finished neighbours' seams: `node tools/shot.mjs --seam <id>` shows the real
+- Twelve panels are finished (01–11, 19) — study your finished neighbours' seams: `node tools/shot.mjs --seam <id>` shows the real
   neighbour; match the road and the rider's continuity, not their style.
+- Low-fps looks (film judder, puppets): quantise local time inside (1, 5) only and pose the rider through
+  `ctx.riderAt(ctx.t - u + uq)` — see `src/scenes/10-wayang.js` (8 fps puppet) for the pattern; at the seams use `u` itself.
+- Silhouettes / cast shadows of the rider: fill every `poly` part and stroke every `line` part of `K.rig.parts(placed)` into
+  a small reusable Canvas2D (one colour), then transform/tint the result — `10-wayang.js` does exactly this for its screen shadow.
+- A strong, specific reference composition beats a generic one: after the user's feedback, Ukiyo-e was reworked toward
+  a single famous print's *structure* (big Fuji, plain, stream, path) while every element stayed original. Aim for that
+  level of recognisability of the source's language and layout ideas from your first round.
 
 ## 9. Workflow
 ```bash

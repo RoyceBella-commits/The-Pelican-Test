@@ -26,14 +26,15 @@ export const MANIFEST = [
     title: { zh: '爪哇皮影戏', en: 'Wayang Kulit' }, year: { zh: '约 1800 年', en: 'c. 1800' } },
   { file: '11-ukiyoe.js', id: 'ukiyoe', color: '#3f6f8f',
     title: { zh: '浮世绘', en: 'Ukiyo-e' }, year: { zh: '1830 年代', en: '1830s' } },
-  { file: '12-muybridge.js', id: 'muybridge', color: '#5a5048',
-    title: { zh: '迈布里奇连拍', en: 'Muybridge Motion Study' }, year: { zh: '1878 年', en: '1878' } },
+  // slots 12 and 15 are empty until panels 12–16 are re-ordered (file: null → placeholder)
+  { file: null, id: 'slot12', color: '#5a5a5a',
+    title: { zh: '待定', en: 'To be decided' }, year: { zh: '—', en: '—' } },
   { file: '13-starry.js', id: 'starry', color: '#1f3d78',
     title: { zh: '星月夜', en: 'The Starry Night' }, year: { zh: '1889 年', en: '1889' } },
   { file: '14-scream.js', id: 'scream', color: '#c8602d',
     title: { zh: '呐喊', en: 'The Scream' }, year: { zh: '1893 年', en: '1893' } },
-  { file: '15-moon.js', id: 'moon', color: '#6b6b6b',
-    title: { zh: '月球旅行记', en: 'A Trip to the Moon' }, year: { zh: '1902 年', en: '1902' } },
+  { file: null, id: 'slot15', color: '#5a5a5a',
+    title: { zh: '待定', en: 'To be decided' }, year: { zh: '—', en: '—' } },
   { file: '16-nosferatu.js', id: 'nosferatu', color: '#3a3f38',
     title: { zh: '诺斯费拉图', en: 'Nosferatu' }, year: { zh: '1922 年', en: '1922' } },
   { file: '17-chat.js', id: 'chat', color: '#3a6ea5',
@@ -57,7 +58,7 @@ export async function loadScenes() {
     const meta = { ...m, index };
     let mod = null, error = null;
     try {
-      mod = (await import(`./${m.file}`)).default;
+      mod = m.file ? (await import(`./${m.file}`)).default : { placeholder: true };
     } catch (e) {
       error = e;
       console.error(`[scenes] ${m.file} failed to load:`, e);

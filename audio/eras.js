@@ -76,8 +76,6 @@ const V = {
   taiko: I.drum({ freq: 66, decay: 0.42, level: 0.55, pitchFrom: 1.5, drive: 1.5, slap: 0.15 }),
   tsuzumi: I.drum({ freq: 330, decay: 0.2, level: 0.25, pitchFrom: 0.85, pitchTime: 0.08 }),
   musicbox: I.bell({ partials: [[1, 1, 0.9], [3.9, 0.25, 0.25], [8.2, 0.08, 0.1]], octave: 1, level: 0.12, strike: 0.1, strikeRatio: 6 }),
-  playerPiano: I.piano({ level: 0.1, decay: 2.5 }),
-  shutter: I.noiseHit({ type: 'bandpass', freq: 3400, q: 1.5, decay: 0.03, level: 0.22, claps: 2, seed: 67, body: 240 }),
   strings: I.strings({ level: 0.2, lp: 3000, attack: 0.12, release: 0.5 }),
   violin: I.strings({ octave: 1, level: 0.15, lp: 4200, attack: 0.08, release: 0.3, detunes: [-4, 4] }),
   celesta: I.bell({ partials: [[1, 1, 1.2], [4, 0.2, 0.3]], octave: 1, level: 0.08 }),
@@ -215,15 +213,6 @@ export const ERAS = {
     });
     E.on('gulp', (b) => slide(E.ctx, E.bus.input, E.T(b), 0.25, 55, 43, 0.14));
   },
-  muybridge(E) {
-    E.melody(V.musicbox, E.bus.room, { vel: 0.9 });
-    const roots = ROOTS[E.phrase];
-    each(0, 12, 1, (b) => { const r = roots[Math.floor(b / 4)]; if (Math.round(b) % 2) chord(E, V.playerPiano, E.bus.input, b, 0.4, triad(r + 12, r === 59), 0.35); else E.play(V.playerPiano, E.bus.input, b, 0.5, r - 12, 0.5); });
-    each(0, 12, 1, (b) => E.play(V.shutter, E.bus.input, b, 0.1, 60, 0.5));
-    E.on('shutter', (b) => each(0, 4, 0.125, (k) => E.play(V.shutter, E.bus.input, b + k, 0.05, 60, 0.8)));
-    E.on('proofCircle', (b) => whoosh(E.ctx, E.bus.input, E.T(b), 0.35, 2000, 5000, 0.08));
-    E.on('banknote', (b) => E.play(V.toast, E.bus.room, b, 0.5, 88, 0.9));
-  },
   starry(E) {
     E.melody(V.strings, E.bus.hall, { vel: 0.9 });
     E.notes.forEach(([b, len, m]) => each(b, b + len, 0.25, (k) => E.play(V.harp, E.bus.room, k, 0.3, m - 12 + [0, 7, 12, 16][Math.round(k * 4) % 4], 0.25)));
@@ -237,15 +226,6 @@ export const ERAS = {
     roots.forEach((r, k) => chord(E, V.strings, E.bus.room, k * 4, 4, [r - 12, r - 5], 0.5));
     E.on('pelicanScreams', (b) => E.play(V.violin, E.bus.hall, b, 1, 86, 0.9, { bend: 600 }));
     E.on('everybodyScreams', (b) => chord(E, V.violin, E.bus.hall, b, 1, [84, 85, 87, 90], 0.8));
-  },
-  moon(E) {
-    E.melody(V.piano, E.bus.room, { vel: 0.95, octave: 1 });
-    const roots = ROOTS[E.phrase];
-    each(0, 12, 1, (b) => { const r = roots[Math.floor(b / 4)]; if (Math.round(b) % 2) chord(E, V.piano, E.bus.input, b, 0.4, triad(r, r === 59), 0.45); else E.play(V.piano, E.bus.input, b, 0.4, r - 12, 0.6); });
-    E.on('ramp', (b) => slide(E.ctx, E.bus.input, E.T(b), 0.9, 60, 84, 0.08, 'triangle'));
-    E.on('splat', (b) => { E.play(V.snare, E.bus.room, b, 0.3, 60, 1); E.play(V.bo, E.bus.room, b, 0.5, 60, 1); });
-    E.on('sneeze', (b) => { whoosh(E.ctx, E.bus.input, E.T(b), 0.3, 1200, 600, 0.2); chord(E, V.piano, E.bus.input, b, 0.3, [49, 50, 53, 56], 0.7); });
-    E.on('land', (b) => E.play(V.kick808, E.bus.input, b, 0.4, 60, 0.6));
   },
   nosferatu(E) {
     E.melody(V.organ, E.bus.hall, { vel: 0.9, scale: SCALES.minor });
