@@ -62,7 +62,9 @@ export function pluckBuffer(ctx, freq, opts = {}) {
       const yy = ap * y + apX - ap * apY;
       apX = y; apY = yy;
       let v = yy;
-      if (buzz > 0) v = v + buzz * 0.35 * (Math.abs(v) > 0.08 ? Math.sign(v) * (Math.abs(v) - 0.08) * 0.5 : 0);   // bridge buzz
+      // bridge buzz (sawari): the string grazes a flat bridge — a lossy soft clip that adds
+      // high harmonics but can only remove energy (never grows)
+      if (buzz > 0) { const a = Math.abs(v), thr = 0.12; if (a > thr) v = Math.sign(v) * (thr + (a - thr) * (1 - 0.6 * buzz)); }
       prev = cur;
       line[idx] = v;
       idx = (idx + 1) % line.length;

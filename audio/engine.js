@@ -38,6 +38,13 @@ export async function renderScore(opts = {}) {
   const ctx = new OfflineAudioContext(2, Math.ceil((to - from) * SR), SR);
   const bus = makeBus(ctx);
   const { buildScore } = await import('./score.js');
-  await buildScore(ctx, bus, { from, to, only: opts.only, scenes: opts.scenes });
-  return ctx.startRendering();
+  await buildScore(ctx, bus, { from, to, only: opts.only, scenes: opts.scenes, levels: opts.levels });
+  const buf = await ctx.startRendering();
+  // deterministic peak normalisation to −1 dBFS (full renders only; partial renders keep raw level)
+  if (opts.normalize !== false && from === 0 && to === DURATION) {
+    let peak = 0;
+    for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; } }
+    if (peak > 0) { const g = 0.89 / peak; for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= g; } }
+  }
+  return buf;
 }

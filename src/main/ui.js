@@ -40,19 +40,60 @@ function updateUI() {
   $('play').textContent = playing ? '❚❚' : '▶';
 }
 
+// ------------------------------------------------------------------ music
+// The whole score is synthesised once in the page (OfflineAudioContext, same code
+// as the film's WAV) and played as a buffer: heavy frames can never drop notes, and
+// while it plays the audio clock is the master clock.
+let audioBuf = null, actx = null, src = null, audioStart = 0;
+async function prepareMusic() {
+  $('audioState').textContent = '♪ 合成中…';
+  try {
+    const { renderScore } = await import('/audio/engine.js');
+    audioBuf = await renderScore({ scenes: window.film.scenes });
+    $('audioState').textContent = '♪ 就绪';
+    if (playing) startAudio();
+  } catch (e) {
+    console.error(e);
+    $('audioState').textContent = '♪ 失败';
+  }
+}
+function startAudio() {
+  if (!audioBuf || !$('sound').checked) return;
+  actx = actx || new AudioContext({ sampleRate: 48000, latencyHint: 'playback' });
+  actx.resume();
+  stopAudio();
+  src = actx.createBufferSource();
+  src.buffer = audioBuf;
+  src.connect(actx.destination);
+  src.start(0, Math.max(0, t));
+  audioStart = actx.currentTime - t;
+}
+function stopAudio() { if (src) { try { src.stop(); } catch {} src.disconnect(); src = null; } }
+function audioTime() {
+  if (!src || !actx) return null;
+  const ts = actx.getOutputTimestamp ? actx.getOutputTimestamp() : null;
+  const ct = ts && ts.contextTime ? ts.contextTime : actx.currentTime;
+  return ct - audioStart;
+}
+
 // ------------------------------------------------------------------ clock
 const now = () => performance.now() / 1000;
-function clockTime() { return playing ? Math.min(DUR, startT + (now() - startWall)) : t; }
+function clockTime() {
+  if (!playing) return t;
+  const at = audioTime();
+  return Math.min(DUR, at != null ? Math.max(0, at) : startT + (now() - startWall));
+}
 function play() {
   if (t >= DUR - 0.05) t = 0;
   playing = true; startWall = now(); startT = t;
+  startAudio();
   if (mode === 'draft' && video.src) { video.currentTime = t; video.play().catch(() => {}); }
   updateUI();
 }
-function pause() { t = clockTime(); playing = false; video.pause(); requestRender(); updateUI(); }
+function pause() { t = clockTime(); playing = false; stopAudio(); video.pause(); requestRender(); updateUI(); }
 function seek(tt) {
   t = Math.max(0, Math.min(DUR - 1 / TL.FPS, tt));
-  if (playing) { startWall = now(); startT = t; }
+  if (playing) { startWall = now(); startT = t; startAudio(); }
   if (mode === 'draft' && video.src) video.currentTime = t;
   requestRender();
   updateUI();
@@ -75,7 +116,9 @@ async function requestRender() {
 function loop() {
   if (playing) {
     t = clockTime();
-    if (t >= DUR - 1 / TL.FPS) { t = DUR - 1 / TL.FPS; playing = false; video.pause(); }
+    if (t >= DUR - 1 / TL.FPS) { t = DUR - 1 / TL.FPS; playing = false; video.pause(); stopAudio(); }
+    // keep the draft video locked to the audio clock
+    if (mode === 'draft' && video.src && Math.abs(video.currentTime - t) > 0.08) video.currentTime = t;
     if (mode === 'live' && !rendering) requestRender();
     updateUI();
   }
@@ -93,6 +136,7 @@ $('play').onclick = () => (playing ? pause() : play());
 $('prev').onclick = (e) => seek(t - (e.shiftKey ? 1 : 1 / TL.FPS));
 $('next').onclick = (e) => seek(t + (e.shiftKey ? 1 : 1 / TL.FPS));
 $('beat').onchange = () => requestRender();
+$('sound').onchange = () => { if ($('sound').checked) { if (playing) startAudio(); } else stopAudio(); };
 $('mode').onchange = async (e) => {
   mode = e.target.value;
   if (mode === 'draft') {
@@ -126,6 +170,7 @@ function boot() {
   updateUI();
   requestRender();
   loop();
+  prepareMusic();
 }
 if (window.__ready) boot(); else document.addEventListener('film-ready', boot, { once: true });
 

@@ -48,6 +48,8 @@
     <button id="next" title="下一帧（→，Shift+→ 前进 1 秒）">帧 ▶︎</button>
     <div id="time">00:00.00 · 帧 0</div>
     <div id="scene"><b>序</b><span>Preface</span></div>
+    <label title="声音开关"><input type="checkbox" id="sound" checked> 声音</label>
+    <span id="audioState" style="color:var(--dim);font-size:12px;min-width:64px"></span>
     <label title="强拍闪烁 + 调试信息"><input type="checkbox" id="beat"> 节拍</label>
     <select id="mode" title="实时渲染：精确但可能卡顿；流畅播放：播放已渲染的草稿视频">
       <option value="live">实时渲染</option>

@@ -1,12 +1,14 @@
-// The score (stage-4 skeleton). Times are film seconds; `at(t)` maps them to the
-// render context's clock (renders may start mid-film).
+// The score. Times are film seconds; `at(t)` maps them to the render context's
+// clock (renders may start mid-film).
 //
 // Structure (120 BPM, bar = 2 s, downbeats on odd seconds):
 //   intro 0–5 (half-bar pickup + 2 bars) · 20 panels × 3 bars · outro 6 bars
 //   each panel: bar 1 statement · bar 2 space for the gag · bar 3 lead-in to the crossing downbeat
+// Every panel plays the same original theme on its era's instruments (eras.js).
 import * as TL from '../src/beat/timeline.js';
 import { riderAt } from '../src/beat/ride.js';
 import * as I from './instruments.js';
+import { ERAS, V } from './eras.js';
 
 // ------------------------------------------------------------------ the theme (original)
 // D major pentatonic. Notes: [beat offset from the panel's first downbeat, length in beats, midi, velocity]
@@ -23,15 +25,13 @@ export const THEME = {
     [8, 1, Fs4, 0.8], [9, 0.5, E4, 0.7], [9.5, 0.5, D4, 0.7], [10, 1, E4, 0.8], [11, 0.5, A3, 0.75], [11.5, 0.5, B3, 0.8],
   ],
 };
-// bass roots per bar (midi): A: D | G | A   B: D | Bm | A
-export const ROOTS = { A: [38, 43, 45], B: [38, 47, 45] };
 
-// ------------------------------------------------------------------ layers
-const bellInst = I.bell({ partials: [[1, 1, 0.9], [2.32, 0.55, 0.5], [3.94, 0.3, 0.3], [5.1, 0.12, 0.2]], level: 0.16, strike: 0.25, strikeRatio: 2 });
-const tick = I.noiseHit({ type: 'bandpass', freq: 5200, q: 3, decay: 0.012, level: 0.05, seed: 23 });
-const cello = I.strings({ octave: -1, level: 0.07, lp: 1400, attack: 0.35, release: 0.6, detunes: [-5, 0, 4] });
-const timp = I.drum({ freq: 73, decay: 0.6, level: 0.5, pitchFrom: 1.3, pitchTime: 0.05 });
-const tempPiano = I.piano({ level: 0.16 });
+// ------------------------------------------------------------------ through-line layers
+const bellInst = I.bell({ partials: [[1, 1, 0.9], [2.32, 0.55, 0.5], [3.94, 0.3, 0.3], [5.1, 0.12, 0.2]], level: 0.13, strike: 0.25, strikeRatio: 2 });
+const tick = I.noiseHit({ type: 'bandpass', freq: 5200, q: 3, decay: 0.01, level: 0.022, seed: 23 });
+const cello = I.strings({ octave: 0, level: 0.075, lp: 1500, attack: 0.35, release: 0.6, detunes: [-5, 0, 4] });
+const timp = I.drum({ freq: 73, decay: 0.6, level: 0.45, pitchFrom: 1.3, pitchTime: 0.05 });
+const cymbal = I.noiseHit({ type: 'highpass', freq: 5000, decay: 0.9, level: 0.06, seed: 97 });
 
 /** Bicycle bell on every frame crossing (the downbeat). */
 function bells(ctx, bus, at, range) {
@@ -43,48 +43,140 @@ function bells(ctx, bus, at, range) {
   }
 }
 
-/** Chain/freewheel ticks locked to the pedals: 8 per crank revolution while pedalling. */
+/** Chain ticks locked to the pedals: 4 per crank revolution while pedalling. */
 function chain(ctx, bus, at, range, scenes) {
   const step = 1 / 480;
   let prev = null;
   for (let t = Math.max(0, range.from); t < Math.min(range.to, TL.OUTRO_START); t += step) {
     const r = riderAt(t, scenes);
-    const k = Math.floor((r.crank / (2 * Math.PI)) * 8);
-    if (prev !== null && k !== prev && r.v > 5) tick(ctx, bus.input, at(t), 60, 0.01, 0.4 + 0.3 * Math.min(1, r.v / TL.SPEED), { pan: -0.1, seed: k });
+    const k = Math.floor((r.crank / (2 * Math.PI)) * 4);
+    if (prev !== null && k !== prev && r.v > 5) tick(ctx, bus.input, at(t), 60, 0.01, 0.35 + 0.3 * Math.min(1, r.v / TL.SPEED), { pan: -0.1, seed: k });
     prev = k;
   }
 }
 
-/** Intro: documentary low strings and a timpani pulse; the second caption lands on t = 3. */
+/** Intro: documentary low strings and timpani; the second caption lands on the t = 1 downbeat. */
 function intro(ctx, bus, at, range) {
   if (range.from > TL.INTRO) return;
-  const dest = bus.hall;
-  cello(ctx, bus.input, at(0.05), 38, 4.9, 0.7); cello(ctx, dest, at(0.05), 38, 4.9, 0.3);
-  cello(ctx, bus.input, at(1), 45, 3.9, 0.55);
-  cello(ctx, bus.input, at(3), 50, 2.0, 0.6);
-  cello(ctx, bus.input, at(3), 54, 2.0, 0.45);
+  cello(ctx, bus.input, at(0.05), 38, 4.9, 0.6); cello(ctx, bus.hall, at(0.05), 38, 4.9, 0.25);
+  cello(ctx, bus.input, at(1), 45, 3.9, 0.5);
+  cello(ctx, bus.input, at(1), 50, 3.9, 0.45);
+  cello(ctx, bus.input, at(3), 54, 2.0, 0.5);
+  cello(ctx, bus.input, at(3), 57, 2.0, 0.4);
   for (const t of [1, 3]) timp(ctx, bus.input, at(t), 0, 0.5, 0.8);
-  for (let t = 4; t < 5; t += 0.125) timp(ctx, bus.input, at(t), 0, 0.1, 0.25 + (t - 4) * 0.5);   // roll into the first crossing
+  for (let t = 4; t < 5; t += 0.125) timp(ctx, bus.input, at(t), 0, 0.1, 0.2 + (t - 4) * 0.55);   // roll into the first crossing
 }
 
-/** Placeholder melody for every panel until stage 4 assigns the era instruments. */
-function panels(ctx, bus, at, range) {
+// ------------------------------------------------------------------ the per-panel arrangement API
+function makeE(ctx, mainBus, at, range, i, scene, gain = 1) {
+  const t0 = TL.sceneStart(i);
+  // per-era gain stage (levels.json balances the eras' loudness)
+  const stage = (dest) => { const g = ctx.createGain(); g.gain.value = gain; g.connect(dest); return g; };
+  const bus = { input: stage(mainBus.input), room: stage(mainBus.room), hall: stage(mainBus.hall) };
+  const phrase = i % 2 ? 'B' : 'A';
+  const T = (beat) => at(t0 + beat * TL.BEAT);
+  const live = (beat, len) => { const t = t0 + beat * TL.BEAT; return t + len * TL.BEAT + 3 >= range.from && t <= range.to; };
+  const cues = (scene?.cues || []).map((c) => ({ ...c, beat: c.u / TL.BEAT }));
+  const E = {
+    ctx, bus, t0, phrase, T,
+    notes: THEME[phrase],
+    play(inst, dest, beat, len, midi, vel = 0.8, o = {}) {
+      if (!live(beat, len)) return;
+      inst(ctx, dest, T(beat), midi, len * TL.BEAT, vel, o);
+    },
+    /** Play the theme with transforms. */
+    melody(inst, dest, o = {}) {
+      const sp = o.speed ?? 1, tr = (o.transpose ?? 0) + 12 * (o.octave ?? 0), map = o.scale || ((m) => m);
+      let prev = null;
+      for (const [b0, l0, m0, v0] of THEME[phrase]) {
+        const b = b0 / sp, len = l0 / sp;
+        if (b >= 12) break;
+        if (o.skipBar != null && Math.floor(b0 / 4) === o.skipBar) { prev = m0; continue; }
+        const m = map(m0 + tr), vel = (o.vel ?? 0.9) * v0;
+        const opts = {};
+        if (o.slides && prev != null && l0 >= 1 && prev !== m0) { opts.slideFrom = map(prev + tr); opts.slideTime = 0.12; }
+        if (o.detuneFrom != null && b0 >= o.detuneFrom) { opts.detune = o.detuneCents ?? 0; opts.bend = (o.detuneCents ?? 0) * 0.6; }
+        if (o.graces && l0 >= 1) E.play(inst, dest, b - 0.125, 0.12, map(m0 + tr + 2), vel * 0.45);
+        if (o.tremolo && l0 >= o.tremolo.minBeats) {
+          for (let k = 0; k < len; k += o.tremolo.rate * 2) E.play(inst, dest, b + k, o.tremolo.rate * 2, m, vel * (1 - 0.4 * k / len), opts);
+        } else E.play(inst, dest, b, len, m, vel, opts);
+        prev = m0;
+      }
+    },
+    cueBeat(name) { const c = cues.find((c) => c.name === name); return c ? c.beat : null; },
+    on(name, fn) { for (const c of cues) if (c.name === name && live(c.beat, 2)) fn(c.beat); },
+  };
+  return E;
+}
+
+function panels(ctx, bus, at, range, scenes, levels) {
   for (let i = 0; i < TL.N_SCENES; i++) {
     const t0 = TL.sceneStart(i);
-    if (t0 > range.to || t0 + TL.SCENE_DUR < range.from) continue;
-    const phrase = i % 2 ? 'B' : 'A';
-    for (const [b, len, m, v] of THEME[phrase]) tempPiano(ctx, bus.input, at(t0 + b * TL.BEAT), m, len * TL.BEAT, v * 0.8);
+    if (t0 > range.to || t0 + TL.SCENE_DUR + 4 < range.from) continue;
+    const sc = scenes[i] || {};
+    const era = ERAS[sc.id];
+    if (!era) continue;
+    era(makeE(ctx, bus, at, range, i, sc, opts_levels(levels, sc.id)));
   }
 }
 
+const opts_levels = (levels, id) => (levels && levels[id] != null ? levels[id] : 1);
+
+// ------------------------------------------------------------------ outro: every era together
+const TUTTI = [
+  [V.chant, 0.12], [V.harp, 0.25], [V.bianzhong, 0.18], [V.pipa, 0.2], [V.guqin, 0.22], [V.dizi, 0.17], [V.ocarina, 0.2],
+  [V.sitar, 0.18], [V.xiao, 0.15], [V.saron, 0.17], [V.shamisen, 0.18], [V.musicbox, 0.2], [V.strings, 0.32], [V.violin, 0.2],
+  [V.piano, 0.28], [V.organ, 0.2], [V.square, 0.15], [V.epiano, 0.22], [V.pluck, 0.18], [V.celesta, 0.2],
+];
+function outro(ctx, bus, at, range) {
+  const T0 = TL.OUTRO_START;
+  if (range.to < T0) return;
+  const B = (beat) => at(T0 + beat * TL.BEAT);
+  // 125–129: the scroll pulls back and folds — phrase B, bars 1–2, on piano + swelling strings
+  for (const [b, len, m, v] of THEME.B) if (b < 8) V.piano(ctx, bus.room, B(b), m, len * TL.BEAT, v * 0.8);
+  [50, 57, 62].forEach((m) => cello(ctx, bus.hall, B(0), m, 8 * TL.BEAT, 0.45));
+  // rows land on the beats 127.5, 128, 128.5, 129: a bell stab for each
+  [5, 6, 7, 8].forEach((b, k) => bellInst(ctx, bus.room, B(b), 86 - k * 5, 0.4, 0.6));
+  for (let b = 6; b < 8; b += 0.125) timp(ctx, bus.input, B(b), 0, 0.1, 0.2 + (b - 6) * 0.3);
+  // 129–135: the theme, every era's instrument at once; one beat of silence at 133
+  const TT = T0 + 4;
+  const C = (beat) => at(TT + beat * TL.BEAT);
+  TUTTI.forEach(([inst, lvl], k) => {
+    const pan = -0.8 + (1.6 * k) / (TUTTI.length - 1);
+    for (const [b, len, m, v] of THEME.A) {
+      if (b === 8 || b >= 11) continue;                 // rest on beat 8 (t = 133); no pickup — the final chord follows
+      inst(ctx, bus.room, C(b), m, len * TL.BEAT, v * lvl, { pan });
+    }
+  });
+  [[0, 38], [4, 43], [8, 45]].forEach(([b, m]) => { V.pedal(ctx, bus.hall, C(b), m + 24, 3.5 * TL.BEAT, 0.7); timp(ctx, bus.input, C(b), 0, 0.5, 0.9); });
+  cymbal(ctx, bus.hall, C(0), 60, 1, 0.8);
+  // 135: the final chord — everyone, plus the bicycle bell
+  const fin = C(12);
+  TUTTI.forEach(([inst, lvl], k) => [50, 57, 62, 66, 69].forEach((m, j) => { if ((k + j) % 3 === 0) inst(ctx, bus.hall, fin, m + (k % 2 ? 12 : 0), 1.8, 0.5 * lvl, { pan: -0.8 + (1.6 * k) / (TUTTI.length - 1) }); }));
+  V.gongL(ctx, bus.hall, fin, 60, 2, 0.8);
+  timp(ctx, bus.input, fin, 0, 0.5, 1);
+  bellInst(ctx, bus.room, fin + 0.5, 91, 0.4, 0.9);
+  bellInst(ctx, bus.room, fin + 0.75, 91, 0.4, 0.7);
+}
+
+// ------------------------------------------------------------------ build
 export async function buildScore(ctx, bus, opts = {}) {
   const range = { from: opts.from ?? 0, to: opts.to ?? TL.DURATION };
   const at = (t) => Math.max(0, t - range.from);
-  // ride params come from the film's scenes (holds change when the pedals turn); fallback: plain cruising
+  // ride params / cues / ids come from the film's scenes; fallback: plain cruising
   const scenes = opts.scenes || Array.from({ length: TL.N_SCENES }, (_, i) => (i === TL.N_SCENES - 1 ? { ride: { stopAt: 500 } } : {}));
   const want = (name) => !opts.only || opts.only.includes(name);
   if (want('bell')) bells(ctx, bus, at, range);
   if (want('chain')) chain(ctx, bus, at, range, scenes);
   if (want('intro')) intro(ctx, bus, at, range);
-  if (want('panels')) panels(ctx, bus, at, range);
+  let levels = opts.levels;
+  if (levels === undefined) { try { levels = await (await fetch(new URL('./levels.json', import.meta.url))).json(); } catch { levels = null; } }
+  if (want('panels')) panels(ctx, bus, at, range, scenes, levels);
+  if (want('outro')) outro(ctx, bus, at, range);
+  // final fade: silent on the last frame
+  const end = TL.DURATION - range.from;
+  if (end > 0 && end <= range.to - range.from + 0.01) {
+    bus.out.gain.setValueAtTime(bus.out.gain.value, Math.max(0, end - 1.2));
+    bus.out.gain.linearRampToValueAtTime(0, Math.max(0, end - 1 / TL.FPS));
+  }
 }
