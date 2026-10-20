@@ -30,7 +30,7 @@ const PRESETS = {
       ['vapor', 0.6], ['code', 5.5]],
   },
 };
-const FOCUS = { sahara: [500, 560], egypt: [130, 560], han: [500, 560], song: [500, 600], pixel: [560, 600], vapor: [457, 560], code: [250, 540] };
+const FOCUS = { sahara: [500, 560], egypt: [130, 560], han: [805, 600], song: [500, 600], pixel: [560, 600], vapor: [457, 560], code: [250, 540] };
 const aspect = String(a.aspect ?? '16:9');
 const L0 = PRESETS[aspect];
 if (!L0) { console.log(`unknown --aspect ${aspect}; use one of ${Object.keys(PRESETS).join(', ')}`); process.exit(1); }
