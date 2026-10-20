@@ -129,7 +129,7 @@ const opts_levels = (levels, id) => (levels && levels[id] != null ? levels[id] :
 const TUTTI = [
   [V.chant, 0.12], [V.harp, 0.25], [V.bianzhong, 0.18], [V.pipa, 0.2], [V.guqin, 0.22], [V.dizi, 0.17], [V.ocarina, 0.2],
   [V.sitar, 0.18], [V.xiao, 0.15], [V.saron, 0.17], [V.shamisen, 0.18], [V.strings, 0.32], [V.violin, 0.2], [V.organ, 0.2],
-  [V.beep, 0.25], [V.pulse1, 0.15], [V.square, 0.15], [V.epiano, 0.22], [V.pluck, 0.18], [V.marimba, 0.2],
+  [V.beep, 0.25], [V.pulse1, 0.15], [V.vibes, 0.3], [V.epiano, 0.22], [V.pluck, 0.18], [V.marimba, 0.2],
 ];
 function outro(ctx, bus, at, range) {
   const T0 = TL.OUTRO_START;

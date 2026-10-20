@@ -1,7 +1,7 @@
 # 17 chat — 早期聊天窗口 · 2000 年代   (film t = 101–107 s; visible ≈ t 94 … 114)
 
 **Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/17-chat.js`.
-Left neighbour: 16 Nosferatu (dark amber tinted film). Right neighbour: 18 vaporwave (pastel neon).
+Left neighbour: 16 the 8-bit pixel platformer (hard pixels, 16 colours) — keep the GIF clearly a *dithered photo-like GIF*, not another pixel-art game. Right neighbour: 18 vaporwave (pastel neon).
 
 ## Should look like
 An early-2000s desktop instant-messenger conversation window — **a fictional app, fictional OS look**: glossy

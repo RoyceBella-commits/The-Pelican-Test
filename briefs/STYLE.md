@@ -143,8 +143,13 @@ it fits naturally; year/era required. It must be legible at 1080p (≥ 26 px on 
 - p5.brush draws nothing for a curved `spline` with only 2 points — use `line` (or add a midpoint).
 - Every 2D canvas runs on Chrome's CPU raster path (forced for determinism): keep per-frame Canvas2D work modest
   (small live canvases, no full-panel blurs per frame); bake large static rasters once.
-- Twelve panels are finished (01–11, 19) — study your finished neighbours' seams: `node tools/shot.mjs --seam <id>` shows the real
+- Seventeen panels are finished (01–16, 19) — study your finished neighbours' seams: `node tools/shot.mjs --seam <id>` shows the real
   neighbour; match the road and the rider's continuity, not their style.
+- Canvas2D is often the better brush: Starry Night, Scream, Nosferatu, the oscilloscope and the 8-bit panel use no
+  p5.brush at all (painted dashes with colour inside the stroke, dry-brush bristles, additive glow, palette-index pixels).
+- Crisp pixels: p5 2.x WEBGL filters textures linearly; `window._renderer` is undefined here — use
+  `p5.instance._renderer.getTexture(img).setInterpolation(NEAREST, NEAREST)` (see `nearestImage()` in `16-pixel.js`).
+- Additive glow (neon, phosphor): native p5 lines with `blendMode(ADD)` in 2–3 passes — see `15-scope.js`.
 - Low-fps looks (film judder, puppets): quantise local time inside (1, 5) only and pose the rider through
   `ctx.riderAt(ctx.t - u + uq)` — see `src/scenes/10-wayang.js` (8 fps puppet) for the pattern; at the seams use `u` itself.
 - Silhouettes / cast shadows of the rider: fill every `poly` part and stroke every `line` part of `K.rig.parts(placed)` into

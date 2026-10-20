@@ -2,7 +2,9 @@
 
 **Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/20-code.js`.
 Left neighbour: 19 vertical short video (the screen returns to 16:9 at u = 0). Right: nothing — this is the end of
-the road; at u = 6 the outro pulls the camera back and the whole wall appears. **This is the film's finest answer.**
+the road; at u = 6 the outro pulls the camera back and the scroll folds into a 7×3 wall whose 21st cell is an empty
+press-conference seat; the film ends close on that seat with your frozen panel (u = 5.5) as its left neighbour.
+**This is the film's finest answer.**
 
 ## The idea
 The meme behind the whole film: people ask large language models to "generate an SVG of a pelican riding a bicycle".

@@ -84,8 +84,6 @@ const V = {
   organ: I.organ({ level: 0.06, trem: 5.5 }),
   pedal: I.organ({ drawbars: [[0.5, 1], [1, 0.8], [2, 0.3]], octave: -2, level: 0.08, trem: 0.1 }),
   pizz: I.plucked({ decay: 0.6, bright: 0.5, damp: 0.6, level: 0.35, octave: -2 }),
-  square: I.synth({ wave: 'square', octave: 1, level: 0.045, attack: 0.003, decay: 0.06, sustain: 0.7, release: 0.04, lp: 5000 }),
-  tri: I.synth({ wave: 'triangle', octave: -1, level: 0.12, sustain: 0.8 }),
   ping: (ctx, out, t, m, d, v, o) => { I.bell({ partials: [[1, 1, 0.25], [2, 0.3, 0.15]], level: 0.1 })(ctx, out, t, 91, 0.1, v, o); I.bell({ partials: [[1, 1, 0.35], [2, 0.3, 0.2]], level: 0.1 })(ctx, out, t + 0.07, 96, 0.1, v, o); return t + 0.6; },
   epiano: I.epiano({ ratio: 1, index: 2.2, level: 0.14, decay: 2.6 }),
   pad: I.strings({ level: 0.08, lp: 1600, attack: 0.6, release: 1.2, detunes: [-12, -3, 5, 11] }),
@@ -98,6 +96,11 @@ const V = {
   keys: I.synth({ wave: 'triangle', octave: 1, level: 0.03, attack: 0.002, decay: 0.08, sustain: 0.3, release: 0.08 }),
   typing: I.noiseHit({ type: 'highpass', freq: 3200, decay: 0.012, level: 0.04, seed: 83 }),
   toast: I.bell({ partials: [[1, 1, 0.5], [2, 0.2, 0.3]], octave: 1, level: 0.08 }),
+  // General-MIDI ringtone of the 2000s chat window: vibraphone, synth strings, fingered bass, standard kit
+  vibes: I.bell({ partials: [[1, 1, 1.6], [4, 0.25, 0.4], [10, 0.05, 0.15]], level: 0.16, beat: 5.5, strike: 0.1 }),
+  gmBass: I.synth({ wave: 'triangle', octave: -1, level: 0.14, attack: 0.004, decay: 0.2, sustain: 0.5, release: 0.06, lp: 900 }),
+  gmStrings: I.strings({ level: 0.06, lp: 2200, attack: 0.2, release: 0.4, detunes: [-6, 6] }),
+  kitKick: I.drum({ freq: 60, decay: 0.25, level: 0.45, pitchFrom: 2, pitchTime: 0.03 }),
   marimba: I.bell({ partials: [[1, 1, 0.7], [3.93, 0.3, 0.18], [9.2, 0.08, 0.06]], level: 0.2, strike: 0.12, strikeRatio: 4 }),
   // oscilloscope (1950s): sine beeps, a sine sub, relay clicks
   beep: I.synth({ wave: 'sine', octave: 1, level: 0.11, attack: 0.004, decay: 0.05, sustain: 0.8, release: 0.03 }),
@@ -344,10 +347,13 @@ export const ERAS = {
     E.on('oneUp', (b) => [86, 88, 90, 93, 95, 98].forEach((m, k) => E.play(V.blip, E.bus.input, b + k * 0.08, k === 5 ? 0.6 : 0.09, m, 0.8)));
   },
   chat(E) {
-    E.melody(V.square, E.bus.input, { vel: 0.9 });
+    // a General-MIDI ringtone: vibraphone lead, synth strings, fingered bass, a standard kit
+    E.melody(V.vibes, E.bus.room, { vel: 0.9 });
     const roots = ROOTS[E.phrase];
-    each(0, 12, 0.5, (b) => E.play(V.tri, E.bus.input, b, 0.4, roots[Math.floor(b / 4)] + (Math.round(b * 2) % 2 ? 7 : 0), 0.7));
-    each(0, 12, 0.5, (b) => E.play(V.hat, E.bus.input, b, 0.05, 60, 0.6));
+    roots.forEach((r, k) => chord(E, V.gmStrings, E.bus.room, k * 4, 4, triad(r + 12, r === 59), 0.45));
+    each(0, 12, 0.5, (b) => E.play(V.gmBass, E.bus.input, b, 0.4, roots[Math.floor(b / 4)] + (Math.round(b * 2) % 2 ? 7 : 0), 0.7));
+    each(0, 12, 1, (b) => E.play(b % 2 ? V.snare : V.kitKick, E.bus.input, b, 0.2, 60, b % 2 ? 0.45 : 0.8));
+    each(0, 12, 0.5, (b) => E.play(V.hat, E.bus.input, b, 0.05, 60, 0.5));
     for (const n of ['msg', 'gifPop', 'send']) E.on(n, (b) => E.play(V.ping, E.bus.input, b, 0.2, 60, 0.9));
     E.on('nudge', (b) => { const t = E.T(b); const o = E.ctx.createOscillator(); o.type = 'square'; o.frequency.value = 70; const g = E.ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.setValueAtTime(0.06, t + 0.28); g.gain.linearRampToValueAtTime(0, t + 0.32); o.connect(g).connect(E.bus.input); o.start(t); o.stop(t + 0.35); });
   },
@@ -359,6 +365,9 @@ export const ERAS = {
     each(0, 12, 4, (b) => E.play(V.kick808, E.bus.input, b, 0.4, 60, 0.4));
     E.on('speedUp', (b) => slide(E.ctx, E.bus.room, E.T(b), 0.5, 45, 57, 0.06, 'sawtooth'));
     E.on('glitch', (b) => each(0, 0.5, 0.0625, (k) => E.play(V.hat, E.bus.input, b + k, 0.03, 60, 0.9)));
+    E.on('bustTurns', (b) => E.play(V.pad, E.bus.hall, b, 2, 69, 0.5));
+    E.on('wave', (b) => gliss(E, V.celesta, E.bus.hall, b, run(69, 6), 0.125, 0.45));
+    E.on('glow', (b) => chord(E, V.celesta, E.bus.hall, b, 1, [90, 97], 0.5));
   },
   shorts(E) {
     E.melody(V.pluck, E.bus.room, { vel: 0.95, octave: 1 });
@@ -376,7 +385,10 @@ export const ERAS = {
     const roots = ROOTS[E.phrase];
     roots.forEach((r, k) => chord(E, V.pad, E.bus.hall, k * 4, 4, triad(r + 12, r === 59), 0.5));
     each(0, 12, 0.25, (b) => { const r = roots[Math.floor(b / 4)]; E.play(V.keys, E.bus.room, b, 0.2, r + 12 + [0, 7, 12, 16][Math.round(b * 4) % 4], 0.4); });
-    each(3, 8, 0.5, (b) => E.play(V.typing, E.bus.input, b, 0.02, 60, 0.6));
+    // keystrokes: a light patter while the code streams, bursts ending on each tick
+    E.on('streamStart', (b) => each(0, 2, 0.125, (k) => E.play(V.typing, E.bus.input, b + k, 0.02, 60, 0.35)));
+    E.on('tick', (b) => each(-0.375, 0.01, 0.125, (k) => E.play(V.typing, E.bus.input, b + k, 0.02, 60, k === 0 ? 0.8 : 0.5)));
+    E.on('dissolve', (b) => whoosh(E.ctx, E.bus.room, E.T(b), 0.5, 3000, 800, 0.05));
     E.on('complete', (b) => chord(E, V.marimba, E.bus.hall, b, 4, [50, 57, 62, 66, 69, 74], 0.6));
     E.on('toast', (b) => E.play(V.toast, E.bus.room, b, 0.5, 93, 0.6));
   },
