@@ -1,5 +1,11 @@
 # Third-party notices
 
+## This project
+
+The source code is MIT-licensed (see `LICENSE`). The film 《鹈鹕测试》/ The Pelican Test itself — its rendered
+frames and video, its music and sound as rendered, the cover images and the images in `media/` — is
+© 2026 Royce Bella, all rights reserved.
+
 ## Libraries (installed via npm, not modified)
 
 - **p5.js** 2.3.4 — LGPL-2.1 — https://p5js.org — loaded unmodified from `node_modules/p5/lib/p5.min.js`.
