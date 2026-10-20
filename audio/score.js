@@ -125,15 +125,15 @@ const opts_levels = (levels, id) => (levels && levels[id] != null ? levels[id] :
 // ------------------------------------------------------------------ outro: every era together
 const TUTTI = [
   [V.chant, 0.12], [V.harp, 0.25], [V.bianzhong, 0.18], [V.pipa, 0.2], [V.guqin, 0.22], [V.dizi, 0.17], [V.ocarina, 0.2],
-  [V.sitar, 0.18], [V.xiao, 0.15], [V.saron, 0.17], [V.shamisen, 0.18], [V.musicbox, 0.2], [V.strings, 0.32], [V.violin, 0.2],
-  [V.piano, 0.28], [V.organ, 0.2], [V.square, 0.15], [V.epiano, 0.22], [V.pluck, 0.18], [V.celesta, 0.2],
+  [V.sitar, 0.18], [V.xiao, 0.15], [V.saron, 0.17], [V.shamisen, 0.18], [V.strings, 0.32], [V.violin, 0.2], [V.organ, 0.2],
+  [V.beep, 0.25], [V.pulse1, 0.15], [V.square, 0.15], [V.epiano, 0.22], [V.pluck, 0.18], [V.marimba, 0.2],
 ];
 function outro(ctx, bus, at, range) {
   const T0 = TL.OUTRO_START;
   if (range.to < T0) return;
   const B = (beat) => at(T0 + beat * TL.BEAT);
-  // 125–129: the scroll pulls back and folds — phrase B, bars 1–2, on piano + swelling strings
-  for (const [b, len, m, v] of THEME.B) if (b < 8) V.piano(ctx, bus.room, B(b), m, len * TL.BEAT, v * 0.8);
+  // 125–129: the scroll pulls back and folds — phrase B, bars 1–2, on harp + swelling strings
+  for (const [b, len, m, v] of THEME.B) if (b < 8) V.harp(ctx, bus.room, B(b), m, len * TL.BEAT, v * 0.8);
   [50, 57, 62].forEach((m) => cello(ctx, bus.hall, B(0), m, 8 * TL.BEAT, 0.45));
   // rows land on the beats 127.5, 128, 128.5, 129: a bell stab for each
   [5, 6, 7, 8].forEach((b, k) => bellInst(ctx, bus.room, B(b), 86 - k * 5, 0.4, 0.6));
@@ -148,7 +148,7 @@ function outro(ctx, bus, at, range) {
       inst(ctx, bus.room, C(b), m, len * TL.BEAT, v * lvl, { pan });
     }
   });
-  [[0, 38], [4, 43], [8, 45]].forEach(([b, m]) => { V.pedal(ctx, bus.hall, C(b), m + 24, 3.5 * TL.BEAT, 0.7); timp(ctx, bus.input, C(b), 0, 0.5, 0.9); });
+  [[0, 38], [4, 43], [8, 45]].forEach(([b, m]) => { cello(ctx, bus.hall, C(b), m, 3.5 * TL.BEAT, 0.6); timp(ctx, bus.input, C(b), 0, 0.5, 0.9); });
   cymbal(ctx, bus.hall, C(0), 60, 1, 0.8);
   // 135: the final chord — everyone, plus the bicycle bell
   const fin = C(12);

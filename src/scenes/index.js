@@ -26,17 +26,16 @@ export const MANIFEST = [
     title: { zh: '爪哇皮影戏', en: 'Wayang Kulit' }, year: { zh: '约 1800 年', en: 'c. 1800' } },
   { file: '11-ukiyoe.js', id: 'ukiyoe', color: '#3f6f8f',
     title: { zh: '浮世绘', en: 'Ukiyo-e' }, year: { zh: '1830 年代', en: '1830s' } },
-  // slots 12 and 15 are empty until panels 12–16 are re-ordered (file: null → placeholder)
-  { file: null, id: 'slot12', color: '#5a5a5a',
-    title: { zh: '待定', en: 'To be decided' }, year: { zh: '—', en: '—' } },
-  { file: '13-starry.js', id: 'starry', color: '#1f3d78',
+  { file: '12-starry.js', id: 'starry', color: '#1f3d78',
     title: { zh: '星月夜', en: 'The Starry Night' }, year: { zh: '1889 年', en: '1889' } },
-  { file: '14-scream.js', id: 'scream', color: '#c8602d',
+  { file: '13-scream.js', id: 'scream', color: '#c8602d',
     title: { zh: '呐喊', en: 'The Scream' }, year: { zh: '1893 年', en: '1893' } },
-  { file: null, id: 'slot15', color: '#5a5a5a',
-    title: { zh: '待定', en: 'To be decided' }, year: { zh: '—', en: '—' } },
-  { file: '16-nosferatu.js', id: 'nosferatu', color: '#3a3f38',
+  { file: '14-nosferatu.js', id: 'nosferatu', color: '#3a3f38',
     title: { zh: '诺斯费拉图', en: 'Nosferatu' }, year: { zh: '1922 年', en: '1922' } },
+  { file: '15-scope.js', id: 'scope', color: '#2e7d4a',
+    title: { zh: '示波器矢量图', en: 'Oscilloscope Vector Graphics' }, year: { zh: '1950 年代', en: '1950s' } },
+  { file: '16-pixel.js', id: 'pixel', color: '#5b6ee1',
+    title: { zh: '8-bit 像素游戏', en: '8-bit Pixel Game' }, year: { zh: '1980 年代', en: '1980s' } },
   { file: '17-chat.js', id: 'chat', color: '#3a6ea5',
     title: { zh: '早期聊天窗口', en: 'Early Chat Window' }, year: { zh: '2000 年代', en: '2000s' } },
   { file: '18-vapor.js', id: 'vapor', color: '#b45fb3',
@@ -58,7 +57,7 @@ export async function loadScenes() {
     const meta = { ...m, index };
     let mod = null, error = null;
     try {
-      mod = m.file ? (await import(`./${m.file}`)).default : { placeholder: true };
+      mod = (await import(`./${m.file}`)).default;
     } catch (e) {
       error = e;
       console.error(`[scenes] ${m.file} failed to load:`, e);

@@ -1,7 +1,8 @@
-# 16 nosferatu — 诺斯费拉图 · 1922   (film t = 95–101 s; visible ≈ t 88 … 108)
+# 14 nosferatu — 诺斯费拉图 · 1922   (film t = 83–89 s; visible ≈ t 76 … 96)
 
-**Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/16-nosferatu.js`.
-Left neighbour: 15 A Trip to the Moon (greyscale + hand tint). Right neighbour: 17 the early chat window (bright UI).
+**Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/14-nosferatu.js`.
+Left neighbour: 13 The Scream (orange/blue waves). Right neighbour: 15 the oscilloscope (green phosphor lines on black) —
+**the two panels share a transition on the crossing downbeat, see "Exit: the shadow powers on" below.**
 
 ## Should look like
 F. W. Murnau's *Nosferatu* (1922, public domain) and German Expressionist cinema: a tinted black-and-white frame
@@ -29,7 +30,24 @@ Orlok himself does not appear. The star is a shadow.
 | 3.4 | below, the pelican notices it has no shadow, turns back in fright (`lookBack`, `scared`) |
 | 3.8 | the shadow slides back down the wall at speed |
 | 4.0 | DOWNBEAT: the shadow snaps back under the pelican; it rides on, hurried |
-| 6 → 13 | the door at the top creaks open by itself |
+| 5.0 → 6.0 | the lamp starts to buzz and flicker faster; the shadow on the wall is huge (the rider is close to the low lamp) |
+| 6.0 | DOWNBEAT, crossing out: the shadow **powers on** — see below |
+| 6 → 13 | a green afterimage of the shadow's outline fades on the wall; the door at the top creaks open by itself |
+
+## Exit: the shadow powers on (shared with panel 15 — user requirement)
+On the crossing downbeat (u = 6.0, film t = 89.0 — the oscilloscope panel's u = 0) the pelican's shadow on the wall is
+"electrified" and becomes the oscilloscope's world:
+- **u = 6.0 exactly**: the shadow's silhouette outline flares into a crisp phosphor-green trace — a thin bright core
+  `#d8ffe4` inside a soft glow `#39ff7a` (additive) — while the dark shadow fill flashes and drops out. Short electric
+  arcs crawl along the outline for ~0.25 s; the lamp flares white for one frame and dies to a dim glow.
+- **u 6.0 → 6.15**: a spark runs along the floor line (y ≈ 800) from under the shadow to the right frame edge, reaching
+  x = 1000 at u = 6.15 — panel 15 picks it up there as a bright pulse running along its trace.
+- **u 6.0 → 8.0**: phosphor persistence: the green outline (frozen at its u = 6.0 shape) decays exponentially
+  (τ ≈ 0.5 s, a slight green-yellow tint as it fades), leaving a faint ghost that is gone by u ≈ 8.
+- Before u = 6.0 there is NO green anywhere in the panel; the effect never touches the rider itself (the seam contract
+  holds: the rig is drawn normally, full frame rate, no judder outside (1, 5)).
+- Build the outline from the same silhouette canvas as the shadow (edge detect / dilate-minus-erode on the small 2D
+  canvas, or stroke the rig parts' contours), so it matches the shadow exactly.
 
 ## The pelican in this style
 The pelican itself: a tinted greyscale figure with hard expressionist lighting (one side lit, the other in deep shadow),
@@ -48,7 +66,7 @@ amber tint #c08a3e → #2a1a0c · blue spill #3c5a86 → #0d1626 · plaster high
 - `ride: { hold: [2.2, 3.7], speed: 0.45, ramp: 0.3 }`
 - `mods(u)`: `lookBack`, `scared` inside (3.3, 3.95); neutral outside (1, 5).
 - `freezeU: 3.0` (shadow at the door)
-- `cues`: shadowLags 1.0, shadowClimbs 2.0 (+ each step on the beats), claw 3.0, noticed 3.4, snapBack 4.0
+- `cues`: shadowLags 1.0, shadowClimbs 2.0 (+ each step on the beats), claw 3.0, noticed 3.4, snapBack 4.0, lampBuzz 5.0, powerOn 6.0
 
 ## Watch out for
 - The shadow is the star: make it graphic, crisp-edged with a slight penumbra, and properly distorted by the stairs

@@ -1,7 +1,7 @@
 # 11 ukiyoe — 浮世绘 · 1830 年代 · 广重东海道风格   (film t = 65–71 s; visible ≈ t 58 … 78)
 
 **Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/11-ukiyoe.js`.
-Left neighbour: 10 wayang kulit (warm lamp-lit screen). Right neighbour: 12 Muybridge (sepia photographic grid).
+Left neighbour: 10 wayang kulit (warm lamp-lit screen). Right neighbour: 12 The Starry Night (swirling night blues, impasto).
 
 ## Should look like
 Utagawa Hiroshige's *Fifty-three Stations of the Tōkaidō* (1833–34, public domain): colour woodblock print — a black

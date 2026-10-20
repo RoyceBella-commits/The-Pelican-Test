@@ -4,7 +4,7 @@
 //
 // era(ctx, bus, E) where E = { t0, phrase, play(inst, dest, beat, lenBeats, midi, vel, opts), notes, cue(name) → u, at(t), lvl }
 import * as I from './instruments.js';
-import { mtof, noiseBuffer } from './dsp.js';
+import { mtof, noiseBuffer, panned } from './dsp.js';
 
 // ------------------------------------------------------------------ scale maps
 const pc = (m) => ((Math.round(m) - 62) % 12 + 12) % 12;
@@ -98,6 +98,19 @@ const V = {
   keys: I.synth({ wave: 'triangle', octave: 1, level: 0.03, attack: 0.002, decay: 0.08, sustain: 0.3, release: 0.08 }),
   typing: I.noiseHit({ type: 'highpass', freq: 3200, decay: 0.012, level: 0.04, seed: 83 }),
   toast: I.bell({ partials: [[1, 1, 0.5], [2, 0.2, 0.3]], octave: 1, level: 0.08 }),
+  marimba: I.bell({ partials: [[1, 1, 0.7], [3.93, 0.3, 0.18], [9.2, 0.08, 0.06]], level: 0.2, strike: 0.12, strikeRatio: 4 }),
+  // oscilloscope (1950s): sine beeps, a sine sub, relay clicks
+  beep: I.synth({ wave: 'sine', octave: 1, level: 0.11, attack: 0.004, decay: 0.05, sustain: 0.8, release: 0.03 }),
+  subSine: I.synth({ wave: 'sine', level: 0.14, attack: 0.01, sustain: 0.7, release: 0.1 }),
+  relay: I.noiseHit({ type: 'bandpass', freq: 2600, q: 2, decay: 0.012, level: 0.09, seed: 87, body: 900 }),
+  crackle: I.noiseHit({ type: 'bandpass', freq: 3200, q: 0.7, decay: 0.05, level: 0.16, claps: 6, seed: 91 }),
+  // 8-bit console: two pulse channels, a stepped triangle, a noise channel
+  pulse1: I.chip({ duty: 0.25, octave: 1, level: 0.05, decay: 0.08, sustain: 0.65, vib: 0.004 }),
+  pulse2: I.chip({ duty: 0.125, octave: 1, level: 0.03, decay: 0.05, sustain: 0.4 }),
+  blip: I.chip({ duty: 0.125, level: 0.045, decay: 0.04, sustain: 0.6 }),
+  chipTri: I.chip({ level: 0.16, sustain: 0.9, release: 0.01 }),
+  chipKick: I.chipNoise({ hold: 24, decay: 0.09, level: 0.12 }),
+  chipHat: I.chipNoise({ hold: 2, short: true, decay: 0.035, level: 0.05 }),
 };
 export { V };
 
@@ -106,6 +119,50 @@ const each = (from, to, step, fn) => { for (let b = from; b < to - 1e-9; b += st
 const chord = (E, inst, dest, beat, len, ms, vel) => ms.forEach((m) => E.play(inst, dest, beat, len, m, vel));
 const ROOTS = { A: [50, 55, 57], B: [50, 59, 57] };
 const triad = (root, minor = false) => [root, root + (minor ? 3 : 4), root + 7];
+
+/** Mains hum of the valve amplifier: quiet standby until bOn, full until b1. */
+function tubeHum(E, b0, bOn, b1) {
+  const ctx = E.ctx, t0 = E.T(b0), tOn = E.T(bOn), t1 = E.T(b1);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.012, t0 + 0.5); g.gain.setValueAtTime(0.012, tOn);
+  g.gain.linearRampToValueAtTime(0.035, tOn + 0.08); g.gain.setValueAtTime(0.035, t1 - 0.6); g.gain.linearRampToValueAtTime(0, t1);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+  [[60, 1], [120, 0.6], [180, 0.35], [240, 0.2]].forEach(([f, a]) => {
+    const o = ctx.createOscillator(); o.frequency.value = f; const og = ctx.createGain(); og.gain.value = a;
+    o.connect(og).connect(lp); o.start(t0); o.stop(t1 + 0.05);
+  });
+  lp.connect(g).connect(E.bus.input);
+}
+/** Two sines a fifth apart (the 3:2 of the Lissajous knot) twisting in pitch, then springing back at bBack. */
+function lissajousWarp(E, b, bBack) {
+  const ctx = E.ctx, t0 = E.T(b), t1 = E.T(bBack), t2 = t1 + 0.6, dur = t2 - t0, n = 256;
+  [[74, 3, -0.3], [81, 2, 0.3]].forEach(([m, k, pan]) => {
+    const f = mtof(m), curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const tt = (i / (n - 1)) * dur, w = tt / (t1 - t0);
+      const semis = tt < t1 - t0 ? (3 + 4 * w) * Math.sin(2 * Math.PI * k * 1.5 * tt + k)
+        : 4.2 * Math.exp(-(tt - (t1 - t0)) / 0.12) * Math.cos(2 * Math.PI * 6 * (tt - (t1 - t0)));
+      curve[i] = f * Math.pow(2, semis / 12);
+    }
+    const o = ctx.createOscillator(); o.frequency.setValueCurveAtTime(curve, t0, dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.07, t0 + 0.01);
+    g.gain.setValueAtTime(0.07, t2 - 0.15); g.gain.linearRampToValueAtTime(0, t2);
+    o.connect(g).connect(panned(ctx, E.bus.room, pan)); o.start(t0); o.stop(t2 + 0.05);
+  });
+}
+/** The stairwell lamp buzzing and flickering faster until it powers the oscilloscope at bEnd. */
+function lampBuzz(E, b, bEnd) {
+  const ctx = E.ctx, t0 = E.T(b), t1 = E.T(bEnd);
+  const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 100;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.8;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, t0);
+  for (let k = 0, t = t0; t < t1; k++, t += 0.045) {
+    const r = (((Math.sin(k * 12.9898) * 43758.5453) % 1) + 1) % 1, ramp = (t - t0) / (t1 - t0);
+    g.gain.setValueAtTime(r < 0.35 + 0.4 * ramp ? 0.03 * (0.4 + ramp) : 0.004, t);
+  }
+  g.gain.setValueAtTime(0, t1);
+  o.connect(bp).connect(g).connect(E.bus.room); o.start(t0); o.stop(t1 + 0.02);
+}
 
 // ------------------------------------------------------------------ eras
 export const ERAS = {
@@ -219,22 +276,72 @@ export const ERAS = {
     each(0, 12, 2, (b) => E.play(V.celesta, E.bus.hall, b + 0.75, 0.5, 86 + (b % 4 ? 2 : 0), 0.4));
     E.on('skySpinUp', (b) => { gliss(E, V.harp, E.bus.hall, b, run(57, 10), 0.05, 0.5); E.play(V.violin, E.bus.hall, b, 4, 74, 0.6); });
     E.on('bell', (b) => E.play(V.church, E.bus.hall, b, 2, 62, 0.9));
+    E.on('windows', (b) => { const k = Math.round(b - (E.cueBeat('windows') ?? b)); chord(E, V.celesta, E.bus.hall, b, 0.5, [86 + k * 2, 93 + k * 2], 0.5); });
+    E.on('spinDown', (b) => gliss(E, V.harp, E.bus.hall, b, run(81, 8, -1), 0.06, 0.4));
   },
   scream(E) {
     E.melody(V.strings, E.bus.hall, { vel: 0.9, detuneFrom: E.cueBeat('silence') ?? 7, detuneCents: -70 });
     const roots = ROOTS[E.phrase];
     roots.forEach((r, k) => chord(E, V.strings, E.bus.room, k * 4, 4, [r - 12, r - 5], 0.5));
+    E.on('headTurn', (b) => E.play(V.violin, E.bus.hall, b, 1, 75, 0.35, { bend: 100 }));
+    E.on('screamerFright', (b) => chord(E, V.violin, E.bus.hall, b, 0.9, [80, 81, 86], 0.75));
     E.on('pelicanScreams', (b) => E.play(V.violin, E.bus.hall, b, 1, 86, 0.9, { bend: 600 }));
     E.on('everybodyScreams', (b) => chord(E, V.violin, E.bus.hall, b, 1, [84, 85, 87, 90], 0.8));
   },
   nosferatu(E) {
+    // silent-film accompaniment: theatre organ + upright piano (the only panel that uses them)
     E.melody(V.organ, E.bus.hall, { vel: 0.9, scale: SCALES.minor });
     const roots = { A: [38, 43, 45], B: [38, 46, 45] }[E.phrase];
     roots.forEach((r, k) => E.play(V.pedal, E.bus.hall, k * 4, 4, r + 24, 0.8));
+    // piano agitato: bass octave on the beat, a chord off the beat
+    each(0, 12, 1, (b) => {
+      const r = roots[Math.floor(b / 4)] + 12;
+      E.play(V.piano, E.bus.room, b, 0.45, r - 12, 0.45);
+      chord(E, V.piano, E.bus.room, b + 0.5, 0.4, [r + 12, r + 12 + (r % 12 === 10 ? 4 : 3), r + 19], 0.26);
+    });
     each(0, 12, 0.125, (b) => { if (Math.floor(b) % 2 === 0) E.play(V.violin, E.bus.hall, b, 0.12, 62, 0.12); });
-    E.on('shadowClimbs', (b) => each(0, 4, 0.5, (k) => E.play(V.pizz, E.bus.hall, b + k, 0.3, 50 + k * 2, 0.7)));
+    // the shadow climbs: a chromatic piano octave on every step
+    const climb = E.cueBeat('shadowClimbs') ?? 4;
+    const step = (b) => { const k = Math.round(b - climb); E.play(V.piano, E.bus.room, b, 0.45, 50 + k, 0.65); E.play(V.piano, E.bus.room, b, 0.45, 62 + k, 0.5); };
+    E.on('shadowClimbs', step);
+    E.on('step', step);
+    E.on('noticed', (b) => chord(E, V.piano, E.bus.room, b, 0.6, [49, 61, 64, 67, 70], 0.7));
+    E.on('slideDown', (b) => gliss(E, V.piano, E.bus.room, b, [86, 82, 79, 75, 72, 68, 65, 62], 0.05, 0.45));
     E.on('claw', (b) => chord(E, V.organ, E.bus.hall, b, 1.5, [62, 63, 68, 74], 0.8));
     E.on('snapBack', (b) => slide(E.ctx, E.bus.room, E.T(b), 0.3, 74, 50, 0.08, 'sawtooth'));
+    E.on('lampBuzz', (b) => lampBuzz(E, b, E.cueBeat('powerOn') ?? 12));
+  },
+  scope(E) {
+    // sine beeps over a vacuum-tube hum; the wrong knob warps the pitch with the Lissajous figure
+    const on = E.cueBeat('powerOn') ?? 0;
+    tubeHum(E, -2, on, 13);
+    E.melody(V.beep, E.bus.room, { vel: 0.9 });
+    const roots = ROOTS[E.phrase];
+    each(0, 12, 1, (b) => E.play(V.subSine, E.bus.input, b, 0.8, roots[Math.floor(b / 4)] - 12, b % 2 ? 0.4 : 0.6));
+    each(0, 12, 0.5, (b) => E.play(V.relay, E.bus.input, b, 0.02, 60, b % 1 ? 0.3 : 0.55));
+    E.on('powerOn', (b) => { E.play(V.crackle, E.bus.room, b, 0.3, 60, 1); slide(E.ctx, E.bus.room, E.T(b), 0.35, 55, 91, 0.05); E.play(V.kick808, E.bus.input, b, 0.4, 60, 0.5); });
+    E.on('reachKnob', (b) => E.play(V.relay, E.bus.input, b, 0.02, 60, 0.4));
+    E.on('knob', (b) => { E.play(V.relay, E.bus.input, b, 0.02, 60, 1); lissajousWarp(E, b, E.cueBeat('snapBack') ?? b + 1); });
+    E.on('knobBack', (b) => E.play(V.relay, E.bus.input, b, 0.02, 60, 1));
+  },
+  pixel(E) {
+    // four-channel chip music: pulse 1 melody, pulse 2 arpeggio, stepped-triangle bass, noise drums
+    E.melody(V.pulse1, E.bus.input, { vel: 0.9 });
+    const roots = ROOTS[E.phrase];
+    const sfx = [(E.cueBeat('jump') ?? 4), (E.cueBeat('oneUp') ?? 8) + 1];   // pulse 2 is lent to the sound effects
+    each(0, 12, 0.25, (b) => {
+      if (b >= sfx[0] && b < sfx[1]) return;
+      const r = roots[Math.floor(b / 4)], tr = triad(r, r === 59);
+      E.play(V.pulse2, E.bus.input, b, 0.22, [tr[0], tr[1], tr[2], tr[0] + 12][Math.round(b * 4) % 4], 0.6);
+    });
+    each(0, 12, 0.5, (b) => E.play(V.chipTri, E.bus.input, b, 0.45, roots[Math.floor(b / 4)] - 12 + (Math.round(b * 2) % 2 ? 7 : 0), 0.9));
+    each(0, 12, 1, (b) => E.play(V.chipKick, E.bus.input, b, 0.1, 60, 0.9));
+    each(0.5, 12, 1, (b) => E.play(V.chipHat, E.bus.input, b, 0.05, 60, 0.7));
+    E.on('crouch', (b) => E.play(V.blip, E.bus.input, b, 0.12, 62, 0.6, { sweepTo: 55 }));
+    E.on('jump', (b) => E.play(V.blip, E.bus.input, b, 0.35, 74, 0.8, { sweepTo: 88 }));
+    E.on('coin', (b) => [86, 90, 93, 98].forEach((m, k) => E.play(V.blip, E.bus.input, b + k * 0.06, 0.07, m, 0.8)));
+    E.on('land', (b) => E.play(V.chipKick, E.bus.input, b, 0.1, 60, 1));
+    E.on('oneUp', (b) => [86, 88, 90, 93, 95, 98].forEach((m, k) => E.play(V.blip, E.bus.input, b + k * 0.08, k === 5 ? 0.6 : 0.09, m, 0.8)));
   },
   chat(E) {
     E.melody(V.square, E.bus.input, { vel: 0.9 });
@@ -265,12 +372,12 @@ export const ERAS = {
     E.on('likesBurst', (b) => each(0, 1, 0.0625, (k) => slide(E.ctx, E.bus.input, E.T(b + k), 0.06, 84 + k * 8, 96 + k * 8, 0.04)));
   },
   code(E) {
-    E.melody(V.piano, E.bus.room, { vel: 0.9 });
+    E.melody(V.marimba, E.bus.room, { vel: 0.9 });
     const roots = ROOTS[E.phrase];
     roots.forEach((r, k) => chord(E, V.pad, E.bus.hall, k * 4, 4, triad(r + 12, r === 59), 0.5));
     each(0, 12, 0.25, (b) => { const r = roots[Math.floor(b / 4)]; E.play(V.keys, E.bus.room, b, 0.2, r + 12 + [0, 7, 12, 16][Math.round(b * 4) % 4], 0.4); });
     each(3, 8, 0.5, (b) => E.play(V.typing, E.bus.input, b, 0.02, 60, 0.6));
-    E.on('complete', (b) => chord(E, V.piano, E.bus.hall, b, 4, [50, 57, 62, 66, 69, 74], 0.6));
+    E.on('complete', (b) => chord(E, V.marimba, E.bus.hall, b, 4, [50, 57, 62, 66, 69, 74], 0.6));
     E.on('toast', (b) => E.play(V.toast, E.bus.room, b, 0.5, 93, 0.6));
   },
 };

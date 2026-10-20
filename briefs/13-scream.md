@@ -1,7 +1,7 @@
-# 14 scream — 呐喊 · 1893   (film t = 83–89 s; visible ≈ t 76 … 96)
+# 13 scream — 呐喊 · 1893   (film t = 77–83 s; visible ≈ t 70 … 90)
 
-**Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/14-scream.js`.
-Left neighbour: 13 The Starry Night (night blues, impasto). Right neighbour: 15 A Trip to the Moon (b/w hand-tinted film).
+**Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/13-scream.js`.
+Left neighbour: 12 The Starry Night (night blues, impasto). Right neighbour: 14 Nosferatu (amber/blue tinted silent-film stairwell).
 
 ## Should look like
 Edvard Munch's *The Scream* (1893, public domain): long undulating bands of colour (blood-orange and yellow sky, deep

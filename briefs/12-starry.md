@@ -1,7 +1,7 @@
-# 13 starry — 星月夜 · 1889   (film t = 77–83 s; visible ≈ t 70 … 90)
+# 12 starry — 星月夜 · 1889   (film t = 71–77 s; visible ≈ t 64 … 84)
 
-**Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/13-starry.js`.
-Left neighbour: 12 Muybridge (sepia photograph). Right neighbour: 14 The Scream (blood-orange sky).
+**Read `briefs/STYLE.md` first — it is part of this brief.** File: `src/scenes/12-starry.js`.
+Left neighbour: 11 Ukiyo-e (Hokusai-style woodblock: big Fuji, Prussian blue, flat colour). Right neighbour: 13 The Scream (blood-orange sky).
 
 ## Should look like
 Vincent van Gogh's *The Starry Night* (1889, public domain) — the language, not a copy: thick impasto dashes laid in

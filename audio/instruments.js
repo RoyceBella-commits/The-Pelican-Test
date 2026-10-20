@@ -323,3 +323,73 @@ export function gong(p = {}) {
     return t + D * 2;
   };
 }
+
+// ------------------------------------------------------------------ chip voices (8-bit console)
+const waveCache = new WeakMap();
+function periodic(ctx, key, coef) {
+  let m = waveCache.get(ctx); if (!m) waveCache.set(ctx, (m = new Map()));
+  if (!m.has(key)) { const { re, im } = coef(); m.set(key, ctx.createPeriodicWave(re, im)); }
+  return m.get(key);
+}
+/** Pulse wave with duty d (0.125 / 0.25 / 0.5), from its Fourier series. */
+const pulseWave = (ctx, d) => periodic(ctx, 'pulse' + d, () => {
+  const N = 64, re = new Float32Array(N), im = new Float32Array(N);
+  for (let n = 1; n < N; n++) { re[n] = Math.sin(2 * Math.PI * n * d) / (n * Math.PI); im[n] = (1 - Math.cos(2 * Math.PI * n * d)) / (n * Math.PI); }
+  return { re, im };
+});
+/** 4-bit stepped triangle (32 steps per period), the console's bass channel. */
+const triWave = (ctx) => periodic(ctx, 'tri4', () => {
+  const S = 1024, N = 96, re = new Float32Array(N), im = new Float32Array(N);
+  const x = (k) => { const s = Math.floor((k / S) * 32); return (s < 16 ? 15 - s : s - 16) / 7.5 - 1; };
+  for (let n = 1; n < N; n++) {
+    let a = 0, b = 0;
+    for (let k = 0; k < S; k++) { const ph = (2 * Math.PI * n * k) / S; a += x(k) * Math.cos(ph); b += x(k) * Math.sin(ph); }
+    re[n] = (a * 2) / S; im[n] = (b * 2) / S;
+  }
+  return { re, im };
+});
+/** Pulse (p.duty) or stepped-triangle (no duty) chip voice. opts.sweepTo: pitch sweep over the note. */
+export function chip(p = {}) {
+  return (ctx, out, t, midi, dur, vel = 0.8, o = {}) => {
+    const oct = (p.octave ?? 0) * 12, f = mtof(midi + oct);
+    const dest = panned(ctx, out, o.pan ?? p.pan ?? 0);
+    const stop = t + dur + (p.release ?? 0.02) * 3 + 0.05;
+    const s = ctx.createOscillator();
+    s.setPeriodicWave(p.duty ? pulseWave(ctx, p.duty) : triWave(ctx));
+    s.frequency.setValueAtTime(o.slideFrom != null ? mtof(o.slideFrom + oct) : f, t);
+    if (o.slideFrom != null) s.frequency.exponentialRampToValueAtTime(f, t + (o.slideTime ?? 0.06));
+    if (o.sweepTo != null) s.frequency.exponentialRampToValueAtTime(mtof(o.sweepTo + oct), t + dur);
+    if (p.vib) { const l = osc(ctx, 'sine', p.vibRate ?? 6, t + (p.vibDelay ?? 0.15), stop); const lg = gain(ctx, f * p.vib); l.connect(lg).connect(s.frequency); }
+    s.start(t); s.stop(stop);
+    const g = gain(ctx, 0);
+    const end = adsr(g.gain, t, dur, { a: p.attack ?? 0.002, d: p.decay ?? 0.1, s: p.sustain ?? 0.7, r: p.release ?? 0.02, peak: vel * (p.level ?? 0.05) });
+    s.connect(g).connect(dest);
+    return end;
+  };
+}
+const lfsrCache = new WeakMap();
+/** 15-bit LFSR noise held for `hold` samples; short mode (tap 6) gives the metallic periodic noise. */
+function lfsrBuffer(ctx, hold, short) {
+  let m = lfsrCache.get(ctx); if (!m) lfsrCache.set(ctx, (m = new Map()));
+  const key = hold + (short ? 's' : 'l');
+  if (m.has(key)) return m.get(key);
+  const len = ctx.sampleRate, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+  let r = 1, v = 1;
+  for (let i = 0; i < len; i++) {
+    if (i % hold === 0) { const fb = (r & 1) ^ ((r >> (short ? 6 : 1)) & 1); r = (r >> 1) | (fb << 14); v = r & 1 ? -1 : 1; }
+    d[i] = v;
+  }
+  m.set(key, buf);
+  return buf;
+}
+/** Noise channel hit (drums, crackle). */
+export function chipNoise(p = {}) {
+  return (ctx, out, t, midi, dur, vel = 0.8, o = {}) => {
+    const dest = panned(ctx, out, o.pan ?? p.pan ?? 0);
+    const n = ctx.createBufferSource(); n.buffer = lfsrBuffer(ctx, p.hold ?? 4, !!p.short); n.loop = true;
+    const D = p.decay ?? 0.06, g = gain(ctx, 0);
+    g.gain.setValueAtTime(vel * (p.level ?? 0.05), t); g.gain.linearRampToValueAtTime(0, t + D);
+    n.connect(g).connect(dest); n.start(t); n.stop(t + D + 0.02);
+    return t + D;
+  };
+}
