@@ -24,6 +24,8 @@ npm run dev                       # http://127.0.0.1:5180/  preview page (live r
 | `node tools/render.mjs [--draft]` | render all 4110 frames (6 Chrome workers; `--from/--to`, `--resume`) |
 | `node tools/encode.mjs [--draft]` | frames (+ `audio/mix.wav`) → `out/*.mp4` |
 | `node tools/check.mjs` | banned APIs, ride/seam contracts, crossing table, determinism |
+| `node tools/audio.mjs` | render the score → `audio/mix.wav` (`--only bell` for sync checks) |
+| `node tools/levels.mjs` | rebalance the eras' loudness → `audio/levels.json` |
 
 Each tool run uses its own server port and Chrome profile, so several can run at once.
 
@@ -34,15 +36,21 @@ src/beat/     timeline.js (timing + geometry, single source of truth) · ride.js
 src/kit/      drawing kit K: brush wrapper + per-stroke seeding, bakes, text sprites, paper, frames, math
 src/rig/      pelican.js (parametric puppet → named outlines) · pen.js (default pen-line drawing)
 src/scenes/   index.js (manifest) + one file per panel
-src/main/     app.js (p5 entry, renderAt) · film.js (compositor) · camera.js · intro.js · outro.js · ui.js
-tools/        server, shot, sheet, render, encode, check
+src/main/     app.js (p5 entry, renderAt) · film.js (compositor) · camera.js · intro.js · outro.js · press.js · ui.js
+tools/        server, shot, sheet, render, encode, check, audio, levels
 briefs/       art briefs for each panel
-audio/        Web Audio score (stage 4)
+audio/        Web Audio score: theme, per-era arrangements, synthesised instruments, master bus
 ```
 
 ## Timeline
 
 120 BPM, one bar = 2 s, 30 fps. Intro 0–5 s, panel *i* (1–20) starts at 5 + 6(i−1) s on a downbeat
 (frame 150 + 180(i−1)), outro 125–137 s. 4110 frames.
+
+Outro: the scroll folds into a 7×3 wall — the 20 panels plus an empty press-conference seat (「鹈鹕（本人）」).
+「截至目前，人类共提交了 20 份答卷。」 · the camera pushes in through camera flashes · 「鹈鹕本人对此尚未发表评论。」 ·
+the pelican streaks past behind the seat with one bell, and the film holds on the empty chair.
+
+Final render: `node tools/render.mjs && node tools/audio.mjs && node tools/encode.mjs` → `out/pelican-test_1080p.mp4`.
 
 See `THIRD_PARTY_NOTICES.md` for licenses.

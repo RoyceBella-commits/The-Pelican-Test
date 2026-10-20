@@ -22,7 +22,7 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
 const args = ['-y', '-loglevel', 'error', '-stats', '-framerate', '30', '-i', pattern];
 if (useAudio) args.push('-i', wav);
 args.push(
-  '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
+  '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv',
   '-c:v', 'libx264', '-preset', draft ? 'veryfast' : 'slow', '-crf', String(a.crf ?? (draft ? 22 : 16)),
   '-r', '30', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
 );
