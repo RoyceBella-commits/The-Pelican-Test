@@ -26,6 +26,7 @@ npm run dev                       # http://127.0.0.1:5180/  preview page (live r
 | `node tools/check.mjs` | banned APIs, ride/seam contracts, crossing table, determinism |
 | `node tools/audio.mjs` | render the score → `audio/mix.wav` (`--only bell` for sync checks) |
 | `node tools/levels.mjs` | rebalance the eras' loudness → `audio/levels.json` |
+| `node tools/cover.mjs` | cover still → `out/pelican-test_cover.png` (one pelican sliced through 12 eras' styles) |
 
 Each tool run uses its own server port and Chrome profile, so several can run at once.
 

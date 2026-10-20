@@ -317,7 +317,9 @@ export class Film {
   drawSolo(j, u, opts) {
     const sc = this.sceneOf(j);
     const t = (j < 0 ? 0 : TL.sceneStart(j)) + u;
-    const cam = { cx: this.leftOf(j) + this.widthOf(j) / 2, cy: TL.PANEL / 2, z: 1, pxu: opts.pxu ?? 1.0 };
+    // opts.focus = [x, y] in panel units centres the camera elsewhere (cover stills)
+    const f = opts.focus || [this.widthOf(j) / 2, TL.PANEL / 2];
+    const cam = { cx: this.leftOf(j) + f[0], cy: f[1], z: 1, pxu: opts.pxu ?? 1.0 };
     const R = this.rider(t);
     this.renderPanel(j, t, cam, this.fb, W, H, R);
     this.blitInterior(j, cam, this.leftOf(j), 0);

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>鹈鹕测试 · cover</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+// Composes the cover from the per-era renders in /work/cover/ (see tools/cover.mjs).
+const q = new URLSearchParams(location.search);
+const ids = q.get('ids').split(',');
+const BAND0 = +q.get('band0'), ROAD = +q.get('roadY'), PXU = +q.get('pxu'), X0 = +q.get('X0'), AX = +q.get('anchorX');
+const OUTLINE = q.get('outline').split(',').map(Number);
+const W = 1920, H = 1080, dpr = window.devicePixelRatio || 1;
+const META = {
+  sahara: ['01', '前 4000'], egypt: ['02', '前 1300'], han: ['03', '100'], tang: ['04', '750'], song: ['05', '1000'],
+  qingming: ['06', '1100'], maya: ['07', '1200'], mughal: ['08', '1600'], bada: ['09', '1690'], wayang: ['10', '1800'],
+  ukiyoe: ['11', '1830s'], starry: ['12', '1889'], scream: ['13', '1893'], nosferatu: ['14', '1922'], scope: ['15', '1950s'],
+  pixel: ['16', '1980s'], chat: ['17', '2000s'], vapor: ['18', '2010s'], shorts: ['19', '2020s'], code: ['20', '2020s'],
+};
+const cv = document.getElementById('c');
+cv.width = W * dpr; cv.height = H * dpr;
+const x = cv.getContext('2d');
+x.scale(dpr, dpr);
+
+const load = (src) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('cannot load ' + src)); im.src = src; });
+const hash = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+function spaced(text, cx, y, spacing, align = 'left') {
+  // letter-spaced text (canvas letterSpacing where available, manual fallback)
+  if ('letterSpacing' in x) { x.letterSpacing = spacing + 'px'; x.textAlign = align; x.fillText(text, cx, y); x.letterSpacing = '0px'; return; }
+  x.textAlign = 'left';
+  const ws = [...text].map((ch) => x.measureText(ch).width), tot = ws.reduce((s, w) => s + w, 0) + spacing * (ws.length - 1);
+  let px = align === 'center' ? cx - tot / 2 : align === 'right' ? cx - tot : cx;
+  [...text].forEach((ch, k) => { x.fillText(ch, px, y); px += ws[k] + spacing; });
+}
+
+try {
+  await Promise.all(['900 136px "Songti SC"', '600 30px "Songti SC"', 'italic 20px Baskerville', '38px Baskerville', '20px "PingFang SC"', '14px Menlo', '64px "Kaiti SC"']
+    .map((f) => document.fonts.load(f, '鹈鹕测试Aa1')));
+  const imgs = await Promise.all(ids.map((id) => load(`/work/cover/${id}.png`)));
+
+  // ---------------------------------------------------------------- the strips
+  x.fillStyle = '#15110d'; x.fillRect(0, 0, W, H);
+  const n = ids.length, edge = (k) => Math.round(BAND0 + ((W - BAND0) * k) / n);
+  imgs.forEach((im, k) => { const a = edge(k), b = edge(k + 1); x.drawImage(im, a, 0, b - a, H, a, 0, b - a, H); });
+  // seams between eras: a dark hairline and a soft shadow, like panels hung edge to edge
+  for (let k = 1; k < n; k++) {
+    const a = edge(k);
+    const g = x.createLinearGradient(a, 0, a + 10, 0); g.addColorStop(0, 'rgba(0,0,0,0.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(a, 0, 10, H);
+    x.fillStyle = 'rgba(12,10,8,0.9)'; x.fillRect(a - 1, 0, 2, H);
+  }
+  // one continuous pen line traces the bird across every era, so the slices read as one pelican
+  const TL = await import('/src/beat/timeline.js');
+  const { pose, placed, GEOM } = await import('/src/rig/pelican.js');
+  const { rigParts } = await import('/src/rig/parts.js');
+  const crank = (2 * Math.PI * (X0 + TL.FRAME_W)) / TL.CRANK_DIST, wheel = (X0 + TL.FRAME_W) / GEOM.R;
+  const P = placed(pose({ crank, wheel, t: 0, v: TL.SPEED }, {}), { x: X0, y: TL.ROAD_Y, scale: 1, rot: 0 });
+  const camX = X0 + 15 - (AX - 960) / PXU, camY = TL.ROAD_Y - (ROAD - 540) / PXU;
+  const S = ([px, py]) => [(px - camX) * PXU + 960, (py - camY) * PXU + 540];
+  const SKIP = new Set(['spoke', 'rim', 'hub', 'chain', 'secondaries', 'primary', 'pupil', 'eyeShut', 'nail', 'face', 'crest', 'legFar', 'footFar', 'crankFar']);
+  const lo = edge(OUTLINE.indexOf(1)), hi = edge(OUTLINE.lastIndexOf(1) + 1);
+  x.save();
+  x.beginPath(); x.rect(lo, 0, hi - lo, H); x.clip();
+  for (const [lw, col] of [[4, 'rgba(10,8,6,0.28)'], [1.6, 'rgba(255,246,226,0.86)']]) {
+    x.lineWidth = lw; x.strokeStyle = col; x.lineJoin = 'round'; x.lineCap = 'round';
+    for (const part of rigParts(P)) {
+      if (SKIP.has(part.role)) continue;
+      x.beginPath();
+      if (part.kind === 'circle') { const [cx, cy] = S(part.c); x.arc(cx, cy, part.r * PXU, 0, Math.PI * 2); }
+      else { part.pts.forEach((p, i) => { const [sx, sy] = S(p); i ? x.lineTo(sx, sy) : x.moveTo(sx, sy); }); if (part.kind === 'poly') x.closePath(); }
+      x.stroke();
+    }
+  }
+  x.restore();
+  // labels under the road: panel number and year
+  const lg = x.createLinearGradient(0, ROAD + 14, 0, H); lg.addColorStop(0, 'rgba(12,10,8,0)'); lg.addColorStop(0.45, 'rgba(12,10,8,0.82)'); lg.addColorStop(1, 'rgba(12,10,8,0.92)');
+  x.fillStyle = lg; x.fillRect(BAND0, ROAD + 14, W - BAND0, H - ROAD - 14);
+  ids.forEach((id, k) => {
+    const cx = (edge(k) + edge(k + 1)) / 2, [num, year] = META[id] || ['', ''];
+    x.fillStyle = '#c9a35a'; x.font = '600 13px Menlo'; spaced(num, cx, H - 38, 2, 'center');
+    x.fillStyle = '#efe4cc'; x.font = '16px "PingFang SC"'; spaced(year, cx, H - 16, 1, 'center');
+  });
+
+  // ---------------------------------------------------------------- the title panel
+  const tp = x.createLinearGradient(0, 0, BAND0, H);
+  tp.addColorStop(0, '#1d1812'); tp.addColorStop(1, '#100d0a');
+  x.fillStyle = tp; x.fillRect(0, 0, BAND0, H);
+  const spot = x.createRadialGradient(260, 260, 20, 260, 260, 620);
+  spot.addColorStop(0, 'rgba(255,226,180,0.10)'); spot.addColorStop(1, 'rgba(255,226,180,0)');
+  x.fillStyle = spot; x.fillRect(0, 0, BAND0, H);
+  for (let k = 0; k < 9000; k++) { x.fillStyle = `rgba(255,240,210,${0.012 + hash(k) * 0.025})`; x.fillRect(hash(k + 1) * BAND0, hash(k + 2) * H, 1.2, 1.2); }
+  // gold edge where the gallery begins
+  x.fillStyle = '#c9a35a'; x.fillRect(BAND0 - 2, 0, 3, H);
+  x.fillStyle = 'rgba(0,0,0,0.5)'; x.fillRect(BAND0 + 1, 0, 6, H);
+
+  const L = 92;
+  x.textBaseline = 'alphabetic';
+  x.fillStyle = '#b5a483'; x.font = '20px "PingFang SC"'; spaced('一部程序生成的艺术史短片', L, 128, 6);
+  x.fillStyle = '#8f8068'; x.font = '15px Baskerville'; spaced('A PROCEDURAL SHORT FILM', L, 156, 5);
+  // title
+  x.fillStyle = '#f3e7cc'; x.font = '900 136px "Songti SC"'; spaced('鹈鹕测试', L - 6, 318, 6);
+  x.fillStyle = '#d9c39a'; x.font = '38px Baskerville'; spaced('THE PELICAN TEST', L, 376, 9);
+  // seal
+  x.fillStyle = '#b3322a'; x.fillRect(BAND0 - 148, 396, 56, 56);
+  x.fillStyle = '#f6e9d8'; x.font = '40px "Kaiti SC"'; x.textAlign = 'center'; x.fillText('鹕', BAND0 - 120, 438); x.textAlign = 'left';
+  x.fillStyle = '#b8352b'; x.fillRect(L, 418, 64, 3);
+  // tagline
+  x.fillStyle = '#e9dcc0'; x.font = '600 30px "Songti SC"';
+  spaced('人类自古以来就痴迷于画鹈鹕骑自行车。', L, 490, 2);
+  spaced('——早在自行车被发明之前。', L, 540, 2);
+  x.fillStyle = '#a8977a'; x.font = 'italic 20px Baskerville';
+  spaced('Since time immemorial, humankind has been obsessed', L, 596, 0.5);
+  spaced('with drawing pelicans riding bicycles —', L, 624, 0.5);
+  spaced('long before the bicycle was invented.', L, 652, 0.5);
+  // the road enters from the title panel
+  x.fillStyle = '#c9a35a'; x.fillRect(L, ROAD + 6, BAND0 - L, 2);
+  x.fillStyle = '#efe4cc'; x.font = '600 24px "Songti SC"'; spaced('20 个时代 · 一只鹈鹕 · 一辆自行车', L, ROAD - 46, 2);
+  x.fillStyle = '#8f8068'; x.font = '14px Menlo'; spaced('20 ERAS · ONE PELICAN · ONE BICYCLE · 2:17', L, ROAD - 16, 1.5);
+  window.__coverDone = true;
+} catch (e) {
+  window.__coverError = String(e && e.message || e);
+}
+</script>
+</body>
+</html>
