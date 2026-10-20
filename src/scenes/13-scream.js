@@ -112,7 +112,8 @@ function ribbonPts(sp, w) {
 // ------------------------------------------------------------------ the dry-brush stroke
 // A stroke is a bundle of bristles along a dense polyline; each bristle runs dry in places (value
 // noise along the length, drier toward the end) so the brown board shows through the paint.
-// o = { w, col:[r,g,b], a, dry 0..1, gap (units per noise cell), nb, seed, cj (colour jitter), taper, wav, wl, wph }
+// o = { w, col:[r,g,b], a, dry 0..1, gap (units per noise cell), nb, seed, cj (colour jitter), taper, wav, wl, wph,
+//       full (closed rings: no end trims, no taper) }
 function dryStroke(x, P, o) {
   if (P.length < 2) return;
   if (P.length < 12) P = resampleN(P, 12);          // short marks need samples for the bristle trims and dry gaps
@@ -137,7 +138,7 @@ function dryStroke(x, P, o) {
     const off = nb === 1 ? 0 : ((j + 0.5) / nb - 0.5) * w + (r(1) - 0.5) * (w / nb) * 0.6;
     const bw = nb === 1 ? w : (w / nb) * (1.2 + r(2) * 0.7);
     const al = a * (0.62 + 0.38 * r(4));
-    const s0 = r(5) * 0.1, s1 = 1 - r(6) * 0.12;
+    const s0 = o.full ? 0 : r(5) * 0.1, s1 = o.full ? 1 : 1 - r(6) * 0.12;
     const ns = r(7) * 500;
     x.beginPath();
     let on = false, cnt = 0;
@@ -148,7 +149,7 @@ function dryStroke(x, P, o) {
         const thr = dry * (0.5 + 0.9 * s);
         if (vn1(L[i] / gap + ns, seed + j * 7) < thr) { on = false; continue; }
       }
-      const env = Math.min(1, s / tp, (1 - s) / tp);
+      const env = o.full ? 1 : Math.min(1, s / tp, (1 - s) / tp);
       let ox = off * (0.3 + 0.7 * env);
       if (wav) ox += wav * Math.sin((L[i] / wl) * 6.2832 + wph);
       const px = P[i][0] + NX[i] * ox, py = P[i][1] + NY[i] * ox;
@@ -835,7 +836,7 @@ function paintPelican(K, x, P, scared, detail) {
     if (part.kind === 'circle') {
       if (st.ring) {
         const pts = circlePts(part.c, part.r, Math.max(16, Math.round(part.r * 0.9)), ih(seed, 1) * 6);
-        dryStroke(x, pts.concat([pts[0], pts[1]]), { w: st.ring * s, col: st.c, a: 0.92, dry: part.role === 'tire' ? 0.08 : 0.15, gap: 20, seed, nb: st.ring > 3 ? 2 : 1, wav: 0.7, wl: 40, cj: 8 });
+        dryStroke(x, pts.concat([pts[0], pts[1]]), { w: st.ring * s, col: st.c, a: 0.92, dry: part.role === 'tire' ? 0 : 0.04, gap: 20, seed, nb: st.ring > 3 ? 2 : 1, wav: 0.7, wl: 40, cj: 8, full: true });
       } else if (st.dot) {
         pathPoly(x, circlePts(part.c, part.r * 0.9, 10)); x.fillStyle = rgba(st.dot, 0.95); x.fill();
       } else if (st.eye) {

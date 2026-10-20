@@ -9,6 +9,7 @@ import * as TL from '../src/beat/timeline.js';
 import { riderAt } from '../src/beat/ride.js';
 import * as I from './instruments.js';
 import { ERAS, V } from './eras.js';
+import { FLASHES, T_PASS } from '../src/main/outro.js';
 
 // ------------------------------------------------------------------ the theme (original)
 // D major pentatonic. Notes: [beat offset from the panel's first downbeat, length in beats, midi, velocity]
@@ -32,6 +33,8 @@ const tick = I.noiseHit({ type: 'bandpass', freq: 5200, q: 3, decay: 0.01, level
 const cello = I.strings({ octave: 0, level: 0.075, lp: 1500, attack: 0.35, release: 0.6, detunes: [-5, 0, 4] });
 const timp = I.drum({ freq: 73, decay: 0.6, level: 0.45, pitchFrom: 1.3, pitchTime: 0.05 });
 const cymbal = I.noiseHit({ type: 'highpass', freq: 5000, decay: 0.9, level: 0.06, seed: 97 });
+const shutter = I.noiseHit({ type: 'bandpass', freq: 3600, q: 1.6, decay: 0.025, level: 0.12, seed: 101, body: 700 });
+const flashPop = I.noiseHit({ type: 'highpass', freq: 7000, decay: 0.08, level: 0.05, seed: 103 });
 
 /** Bicycle bell on every frame crossing (the downbeat). */
 function bells(ctx, bus, at, range) {
@@ -132,31 +135,40 @@ function outro(ctx, bus, at, range) {
   const T0 = TL.OUTRO_START;
   if (range.to < T0) return;
   const B = (beat) => at(T0 + beat * TL.BEAT);
-  // 125–129: the scroll pulls back and folds — phrase B, bars 1–2, on harp + swelling strings
-  for (const [b, len, m, v] of THEME.B) if (b < 8) V.harp(ctx, bus.room, B(b), m, len * TL.BEAT, v * 0.8);
-  [50, 57, 62].forEach((m) => cello(ctx, bus.hall, B(0), m, 8 * TL.BEAT, 0.45));
-  // rows land on the beats 127.5, 128, 128.5, 129: a bell stab for each
-  [5, 6, 7, 8].forEach((b, k) => bellInst(ctx, bus.room, B(b), 86 - k * 5, 0.4, 0.6));
-  for (let b = 6; b < 8; b += 0.125) timp(ctx, bus.input, B(b), 0, 0.1, 0.2 + (b - 6) * 0.3);
-  // 129–135: the theme, every era's instrument at once; one beat of silence at 133
-  const TT = T0 + 4;
+  // everything musical fades out during the push-in (131 → 133.6); only the bell is left at the end
+  const fader = (dest) => {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(1, at(T0 + 6)); g.gain.linearRampToValueAtTime(0, at(T0 + 8.6));
+    g.connect(dest); return g;
+  };
+  const fb = { input: fader(bus.input), room: fader(bus.room), hall: fader(bus.hall) };
+  // 125–127: the scroll pulls back — phrase B, bar 1, on harp + swelling strings
+  for (const [b, len, m, v] of THEME.B) if (b < 4) V.harp(ctx, fb.room, B(b), m, len * TL.BEAT, v * 0.8);
+  [50, 57, 62].forEach((m) => cello(ctx, fb.hall, B(0), m, 4 * TL.BEAT, 0.45));
+  // rows land on 127, 127.5, 128; the press seat on 128.5
+  [4, 5, 6].forEach((b, k) => bellInst(ctx, fb.room, B(b), 86 - k * 5, 0.4, 0.6));
+  timp(ctx, fb.input, B(7), 0, 0.5, 0.7);
+  for (let b = 2; b < 4; b += 0.125) timp(ctx, fb.input, B(b), 0, 0.1, 0.2 + (b - 2) * 0.3);
+  // 127–133: the theme, every era's instrument at once
+  const TT = T0 + 2;
   const C = (beat) => at(TT + beat * TL.BEAT);
   TUTTI.forEach(([inst, lvl], k) => {
     const pan = -0.8 + (1.6 * k) / (TUTTI.length - 1);
-    for (const [b, len, m, v] of THEME.A) {
-      if (b === 8 || b >= 11) continue;                 // rest on beat 8 (t = 133); no pickup — the final chord follows
-      inst(ctx, bus.room, C(b), m, len * TL.BEAT, v * lvl, { pan });
-    }
+    for (const [b, len, m, v] of THEME.A) inst(ctx, fb.room, C(b), m, len * TL.BEAT, v * lvl, { pan });
   });
-  [[0, 38], [4, 43], [8, 45]].forEach(([b, m]) => { cello(ctx, bus.hall, C(b), m, 3.5 * TL.BEAT, 0.6); timp(ctx, bus.input, C(b), 0, 0.5, 0.9); });
-  cymbal(ctx, bus.hall, C(0), 60, 1, 0.8);
-  // 135: the final chord — everyone, plus the bicycle bell
-  const fin = C(12);
-  TUTTI.forEach(([inst, lvl], k) => [50, 57, 62, 66, 69].forEach((m, j) => { if ((k + j) % 3 === 0) inst(ctx, bus.hall, fin, m + (k % 2 ? 12 : 0), 1.8, 0.5 * lvl, { pan: -0.8 + (1.6 * k) / (TUTTI.length - 1) }); }));
-  V.gongL(ctx, bus.hall, fin, 60, 2, 0.8);
-  timp(ctx, bus.input, fin, 0, 0.5, 1);
-  bellInst(ctx, bus.room, fin + 0.5, 91, 0.4, 0.9);
-  bellInst(ctx, bus.room, fin + 0.75, 91, 0.4, 0.7);
+  [[0, 38], [4, 43], [8, 45]].forEach(([b, m]) => { cello(ctx, fb.hall, C(b), m, 3.5 * TL.BEAT, 0.6); timp(ctx, fb.input, C(b), 0, 0.5, 0.9); });
+  cymbal(ctx, fb.hall, C(0), 60, 1, 0.8);
+  // camera flashes during the push: a shutter "ka-cha" and the flash's pop
+  for (const [tf, k] of FLASHES) {
+    shutter(ctx, bus.room, at(tf), 60, 0.05, 0.9 * k, { pan: 0.2 });
+    shutter(ctx, bus.room, at(tf + 0.05), 60, 0.05, 0.6 * k, { pan: 0.2 });
+    flashPop(ctx, bus.room, at(tf), 60, 0.1, 0.5 * k);
+  }
+  // the last beat: one bicycle bell, passing left → right behind the empty seat
+  const solo = ctx.createGain(); solo.gain.value = 3; solo.connect(bus.input);    // alone in the silence: clearly present
+  bellInst(ctx, solo, at(T_PASS + 0.06), 91, 0.4, 0.9, { pan: -0.3 });
+  bellInst(ctx, solo, at(T_PASS + 0.18), 91, 0.4, 0.75, { pan: 0.3 });
+  bellInst(ctx, bus.room, at(T_PASS + 0.06), 91, 0.4, 0.5);
 }
 
 // ------------------------------------------------------------------ build

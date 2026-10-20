@@ -1,7 +1,7 @@
 // The frame compositor. One call to draw(t) paints the whole film frame:
 //   wall → each visible panel (rendered into a shared screen-sized framebuffer,
 //   then only its interior rectangle is copied = the clip) → frames → scene
-//   overlays → captions → fade.
+//   overlays → captions.
 import K from '../kit/index.js';
 import { flush, resetBrush, brushLib } from '../kit/brush.js';
 import * as TL from '../beat/timeline.js';
@@ -10,6 +10,7 @@ import { pose, placed, RIG_BOUNDS } from '../rig/pelican.js';
 import { storyCamera, viewRect } from './camera.js';
 import { introScene } from './intro.js';
 import * as OUT from './outro.js';
+import { initPress, renderPress } from './press.js';
 
 const W = TL.VIEW_W, H = TL.VIEW_H;
 const WALL = '#26221e';
@@ -266,8 +267,9 @@ export class Film {
       }
     }
     const placedPanels = [];
-    for (let j = 0; j < TL.N_SCENES; j++) {
-      const { c, k } = OUT.panelCentre(j, t);
+    for (let j = 0; j < OUT.N_CELLS; j++) {
+      const { c, k, shown } = OUT.panelCentre(j, t);
+      if (!shown) continue;
       const x0 = c[0] - TL.PANEL / 2, y0 = c[1] - TL.PANEL / 2;
       if (x0 + TL.PANEL + 60 < v.x0 || x0 - 60 > v.x1 || y0 + TL.PANEL + 60 < v.y0 || y0 - 60 > v.y1) continue;
       placedPanels.push({ j, x0, y0, k });
@@ -275,28 +277,41 @@ export class Film {
     // live panels (only while they still sit in the strip and the crossfade runs)
     if (mix < 1) {
       for (const p of placedPanels) {
-        if (p.k > 0 || !this.inited.has(p.j)) continue;
+        if (p.j === OUT.PRESS || p.k > 0 || !this.inited.has(p.j)) continue;
         this.renderPanel(p.j, t, cam, this.fb, W, H, R);
         this.blitInterior(p.j, cam, p.x0, p.y0);
       }
     }
+    // cell 21: the press seat, drawn live (it is the camera's final subject)
+    const seat = placedPanels.find((p) => p.j === OUT.PRESS);
+    if (seat) {
+      this.fb.begin();
+      clear();
+      push();
+      scale(cam.pxu);
+      translate(-cam.cx + seat.x0, -cam.cy + seat.y0);
+      try { renderPress(K, t); } catch (e) { this.err({ id: 'press' }, e); }
+      pop();
+      this.fb.end();
+      this.blitInterior(OUT.PRESS, cam, seat.x0, seat.y0);
+    }
     this.withCamera(cam, () => {
       for (const p of placedPanels) {
-        const tile = this.tileFor(p.j, TL.PANEL * cam.pxu);
-        if (tile) {
-          push();
-          const a = mix < 1 && p.k === 0 ? mix : 1;
-          if (a < 1) tint(255, 255 * a);
-          imageMode(CORNER);
-          image(tile, p.x0, p.y0, TL.PANEL, TL.PANEL);
-          pop();
+        if (p.j !== OUT.PRESS) {
+          const tile = this.tileFor(p.j, TL.PANEL * cam.pxu);
+          if (tile) {
+            push();
+            const a = mix < 1 && p.k === 0 ? mix : 1;
+            if (a < 1) tint(255, 255 * a);
+            imageMode(CORNER);
+            image(tile, p.x0, p.y0, TL.PANEL, TL.PANEL);
+            pop();
+          }
         }
-        K.frames.drawFrame(this.scenes[p.j].frame, p.x0, p.y0);
+        K.frames.drawFrame('minimal', p.x0, p.y0);
       }
     });
     OUT.drawOutroCaptions(K, t);
-    const f = OUT.fadeToBlack(t);
-    if (f > 0) { noStroke(); fill(0, 255 * f); rect(-2, -2, W + 4, H + 4); }
   }
 
   drawSolo(j, u, opts) {
@@ -311,6 +326,7 @@ export class Film {
 
   // ------------------------------------------------------------ outro tiles
   async ensureTiles() {
+    initPress(K);
     for (let j = 0; j < TL.N_SCENES; j++) {
       if (this.tiles.has(j)) continue;
       await this.initScene(j);

@@ -1,62 +1,85 @@
-// Outro (125–137 s): the scroll pulls back, folds row by row on the beat into a
-// 4×5 museum wall, every panel holding its own era's frozen pelican.
+// Outro (125–137 s, 6 bars): the scroll pulls back and folds row by row on the beat into a
+// 7 × 3 wall — cells 1–20 hold the panels, each with its own era's frozen pelican; cell 21
+// is an empty press-conference seat (press.js). Then:
+//   128.5  wall complete; wide shot, caption 1
+//   131    the camera pushes slowly into cell 21; camera flashes on the strong beats
+//   134    it stops; caption 2
+//   136.5  last beat: the pelican streaks past behind the seat; the film ends on the empty seat
 import {
-  OUTRO_START, DURATION, FPS, PITCH, PANEL, FRAME_W, CAMERA_Y, BASE_PX_PER_UNIT, N_SCENES, panelLeft,
+  OUTRO_START, DURATION, FPS, PITCH, PANEL, CAMERA_Y, BASE_PX_PER_UNIT, N_SCENES, VIEW_W, VIEW_H, panelLeft,
 } from '../beat/timeline.js';
 import { smoothstep, smootherstep, lerp, easeInOut, easeOutBack, clamp } from '../kit/math.js';
 
+export const COLS = 7, ROWS = 3;
+export const N_CELLS = N_SCENES + 1;              // 20 panels + the press seat
+export const PRESS = N_SCENES;                    // cell index of the press seat
 const GP = 1200;                                  // wall pitch (panel + gap)
-const ANCHOR_X = 17 * PITCH + PANEL / 2 + FRAME_W; // centre column = strip position of panel 18
-const ROW3_Y = PANEL / 2;                         // bottom row stays at the scroll height
+const ROW_LAST_Y = PANEL / 2;                     // the bottom row stays at the scroll height
+// panel 20 (cell 19, bottom row, column 5) stays where the story left it
+const ANCHOR_X = panelLeft(N_SCENES - 1) + PANEL / 2 - 2 * GP;   // x of the middle column
 
 export const T_PULL = OUTRO_START;                // 125: pull back starts
-export const T_STRIP = OUTRO_START + 1.6;         // whole scroll visible
-export const T_SETTLE = OUTRO_START + 4;          // 129: wall complete (downbeat)
-export const T_CAP1 = OUTRO_START + 6;            // 131
-export const T_CAP2 = OUTRO_START + 8.5;          // 133.5
-const LAST_FRAME_T = (Math.round(DURATION * FPS) - 1) / FPS;
+export const T_STRIP = OUTRO_START + 1.2;         // whole scroll visible
+export const T_ROW = [OUTRO_START + 3, OUTRO_START + 2.5, OUTRO_START + 2];   // rows 0, 1, 2 land (128, 127.5, 127)
+export const T_SEAT = OUTRO_START + 3.5;          // 128.5: the press seat slides in; wall complete
+export const T_CAP1 = OUTRO_START + 3.5;          // 128.5
+export const T_PUSH0 = OUTRO_START + 6;           // 131: push-in starts
+export const T_PUSH1 = OUTRO_START + 9;           // 134: stopped on the seat
+export const T_CAP2 = OUTRO_START + 9;            // 134
+// camera flashes: [t, strength] — the strong beats, each answered by a second photographer
+export const FLASHES = [[131, 1], [131.1, 0.55], [132, 1], [133, 1], [133.12, 0.6], [133.25, 0.8]];
+export const T_PASS = DURATION - 0.5;             // 136.5: the pelican streaks past
+const ROW_DUR = 1.1, SEAT_DUR = 0.9;
+export const LAST_FRAME_T = (Math.round(DURATION * FPS) - 1) / FPS;
 
-/** Strip (story) centre of panel i. */
+/** Strip (story) centre of cell i (the seat would continue the scroll to the right). */
 const stripC = (i) => [panelLeft(i) + PANEL / 2, CAMERA_Y];
-/** Wall centre of panel i. */
-const wallC = (i) => {
-  const col = i % 5, row = Math.floor(i / 5);
-  return [ANCHOR_X + (col - 2) * GP, ROW3_Y + (row - 3) * GP];
+/** Wall centre of cell i. */
+export const wallC = (i) => {
+  const col = i % COLS, row = Math.floor(i / COLS);
+  return [ANCHOR_X + (col - 3) * GP, ROW_LAST_Y + (row - (ROWS - 1)) * GP];
 };
 
-/** Row r starts moving on a beat; bottom row spreads first, then rows 2, 1, 0 lift in. */
-// arrivals land on beats: bottom row 127.5, then rows 2 → 0 at 128.0, 128.5, 129.0
-const ROW_DUR = 1.1;
-const rowStart = (r) => (r === 3 ? T_STRIP - 0.2 : T_STRIP + 1.4 + (2 - r) * 0.5 - ROW_DUR);
-
-/** Centre of panel i at time t (world units), plus its fold progress. */
+/** Centre of cell i at time t (world units), its fold progress k, and whether it is in place. */
 export function panelCentre(i, t) {
-  if (t <= T_PULL) return { c: stripC(i), k: 0 };
-  const r = Math.floor(i / 5);
-  const k = clamp((t - rowStart(r)) / ROW_DUR);
+  if (i === PRESS) {
+    // the seat arrives last: it slides in from the right and lands on the beat
+    const k = clamp((t - (T_SEAT - SEAT_DUR)) / SEAT_DUR);
+    const b = wallC(i);
+    return { c: [b[0] + 1900 * (1 - easeOutBack(k, 0.9)), b[1]], k: Math.max(k, 1e-6), shown: k > 0 };
+  }
+  if (t <= T_PULL) return { c: stripC(i), k: 0, shown: true };
+  const r = Math.floor(i / COLS);
+  const k = clamp((t - (T_ROW[r] - ROW_DUR)) / ROW_DUR);
   const a = stripC(i), b = wallC(i);
   // x eases in-out, y lifts with a slight overshoot so rows "drop" into place on the beat
   const kx = easeInOut(k);
   const ky = easeOutBack(smoothstep(0.15, 1, k), 1.1);
-  return { c: [lerp(a[0], b[0], kx), lerp(a[1], b[1], ky)], k };
+  return { c: [lerp(a[0], b[0], kx), lerp(a[1], b[1], ky)], k, shown: true };
 }
+
+// wide framing: the wall spans ~90 % of the frame width, centred a little high so the captions fit below
+const WALL_W = COLS * PANEL + (COLS - 1) * (GP - PANEL);
+const Z_WIDE = (0.9 * VIEW_W) / (WALL_W * BASE_PX_PER_UNIT);
+const WALL_MID = [ANCHOR_X, ROW_LAST_Y - GP];
+const WIDE = { cx: WALL_MID[0], cy: WALL_MID[1] + (VIEW_H / 2 - 425) / (Z_WIDE * BASE_PX_PER_UNIT), z: Z_WIDE };
+// close framing: cell 21 about 720 px tall, its centre at screen y 450
+const Z_SEAT = 720 / (PANEL * BASE_PX_PER_UNIT);
+const SEAT = { cx: wallC(PRESS)[0], cy: wallC(PRESS)[1] + (VIEW_H / 2 - 450) / (Z_SEAT * BASE_PX_PER_UNIT), z: Z_SEAT };
 
 /** Outro camera (blends from the story camera at 125). */
 export function outroCamera(t, storyCam) {
-  const wallMid = [ANCHOR_X, ROW3_Y - 1.5 * GP];
-  const strip = { cx: (panelLeft(0) + panelLeft(N_SCENES - 1) + PANEL) / 2, cy: CAMERA_Y, z: 1920 / ((N_SCENES * PITCH + 600) * BASE_PX_PER_UNIT) };
-  // final framing: 4 rows (4·GP) take ~760 px, centred at screen y 400 to leave room for captions
-  const zWall = 760 / (4 * GP * BASE_PX_PER_UNIT);
-  const final = { cx: wallMid[0], cy: wallMid[1] + 140 / (zWall * BASE_PX_PER_UNIT), z: zWall };
+  const strip = { cx: (panelLeft(0) + panelLeft(N_SCENES - 1) + PANEL) / 2, cy: CAMERA_Y, z: VIEW_W / ((N_SCENES * PITCH + 600) * BASE_PX_PER_UNIT) };
   const w1 = smootherstep(T_PULL, T_STRIP, t);
-  const w2 = smootherstep(T_STRIP + 0.3, T_SETTLE + 0.2, t);
-  const lz = lerp(lerp(Math.log(storyCam.z), Math.log(strip.z), w1), Math.log(final.z), w2);
-  const cx = lerp(lerp(storyCam.cx, strip.cx, w1), final.cx, w2);
-  const cy = lerp(lerp(storyCam.cy, strip.cy, w1), final.cy, w2);
-  // a slow drift-in during the captions keeps the wall alive
-  const drift = 1 + 0.035 * smoothstep(T_SETTLE, LAST_FRAME_T, t);
-  const z = Math.exp(lz) * drift;
-  return { cx, cy, z, pxu: BASE_PX_PER_UNIT * z };
+  const w2 = smootherstep(T_STRIP + 0.2, T_SEAT + 0.1, t);
+  const w3 = smootherstep(T_PUSH0, T_PUSH1, t);
+  const mix = (k) => {
+    const a = lerp(lerp(storyCam[k], strip[k], w1), WIDE[k], w2);
+    return lerp(a, SEAT[k], w3);
+  };
+  const lz = lerp(lerp(lerp(Math.log(storyCam.z), Math.log(strip.z), w1), Math.log(WIDE.z), w2), Math.log(SEAT.z), w3);
+  const z = Math.exp(lz);
+  return { cx: mix('cx'), cy: mix('cy'), z, pxu: BASE_PX_PER_UNIT * z };
 }
 
 /** 0..1: how much the frozen tiles replace the live panels (crossfade at 125). */
@@ -64,18 +87,24 @@ export const tileMix = (t) => smoothstep(T_PULL, T_PULL + 0.5, t);
 /** Preface sheet fades away as the scroll pulls back. */
 export const introSheetAlpha = (t) => 1 - smoothstep(T_PULL + 0.4, T_PULL + 1.4, t);
 
+/** Captions, centred below the wall. */
 export function drawOutroCaptions(K, t) {
-  if (t < T_CAP1 - 0.1) return;
   const ink = 'rgba(244,236,220,1)';
-  const a1 = smoothstep(T_CAP1, T_CAP1 + 0.5, t);
-  const a2 = smoothstep(T_CAP2, T_CAP2 + 0.35, t);
-  K.text({ text: '截至目前，人类共提交了 20 份答卷。', font: '"Songti SC", serif', weight: 600, size: 40, color: ink, align: 'center', letterSpacing: 2 }, 960, 818 - 8 * (1 - a1), 1, a1);
-  K.text({ text: 'To date, humankind has handed in 20 answers.', font: '"Baskerville", serif', style: 'italic', size: 22, color: ink, align: 'center' }, 960, 870 - 8 * (1 - a1), 1, a1 * 0.8);
+  const a1 = smoothstep(T_CAP1, T_CAP1 + 0.5, t) * (1 - smoothstep(T_PUSH0 - 0.15, T_PUSH0 + 0.35, t));
+  const a2 = smoothstep(T_CAP2, T_CAP2 + 0.4, t);
+  if (a1 > 0) {
+    K.text({ text: '截至目前，人类共提交了 20 份答卷。', font: '"Songti SC", serif', weight: 600, size: 44, color: ink, align: 'center', letterSpacing: 2 }, 960, 852 - 8 * (1 - a1), 1, a1);
+    K.text({ text: 'To date, humankind has handed in 20 answers.', font: '"Baskerville", serif', style: 'italic', size: 24, color: ink, align: 'center' }, 960, 910 - 8 * (1 - a1), 1, a1 * 0.8);
+  }
   if (a2 > 0) {
-    K.text({ text: '研究仍在继续。', font: '"Songti SC", serif', weight: 600, size: 40, color: ink, align: 'center', letterSpacing: 4 }, 960, 926 - 6 * (1 - a2), 1, a2);
-    K.text({ text: 'Research is ongoing.', font: '"Baskerville", serif', style: 'italic', size: 22, color: ink, align: 'center' }, 960, 978 - 6 * (1 - a2), 1, a2 * 0.8);
+    K.text({ text: '鹈鹕本人对此尚未发表评论。', font: '"Songti SC", serif', weight: 600, size: 44, color: ink, align: 'center', letterSpacing: 2 }, 960, 852 - 6 * (1 - a2), 1, a2);
+    K.text({ text: 'The pelican itself has yet to comment.', font: '"Baskerville", serif', style: 'italic', size: 24, color: ink, align: 'center' }, 960, 910 - 6 * (1 - a2), 1, a2 * 0.8);
   }
 }
 
-/** Final fade: fully black on the last rendered frame. */
-export const fadeToBlack = (t) => smoothstep(DURATION - 0.75, LAST_FRAME_T, t);
+/** Flash intensity at t (0..1): a hard pop decaying in ~0.1 s. */
+export function flashAt(t) {
+  let f = 0;
+  for (const [tf, k] of FLASHES) if (t >= tf && t < tf + 0.6) f = Math.max(f, k * Math.exp(-(t - tf) / 0.06));
+  return f;
+}
