@@ -4,7 +4,7 @@
 //   128.5  wall complete; wide shot, caption 1
 //   131    the camera pushes slowly into cell 21; camera flashes on the strong beats
 //   134    it stops; caption 2
-//   136.5  last beat: the pelican streaks past behind the seat; the film ends on the empty seat
+//   136    the pelican streaks past behind the seat (gone by 136.32); the film holds on the empty seat
 import {
   OUTRO_START, DURATION, FPS, PITCH, PANEL, CAMERA_Y, BASE_PX_PER_UNIT, N_SCENES, VIEW_W, VIEW_H, panelLeft,
 } from '../beat/timeline.js';
@@ -28,7 +28,7 @@ export const T_PUSH1 = OUTRO_START + 9;           // 134: stopped on the seat
 export const T_CAP2 = OUTRO_START + 9;            // 134
 // camera flashes: [t, strength] — the strong beats, each answered by a second photographer
 export const FLASHES = [[131, 1], [131.1, 0.55], [132, 1], [133, 1], [133.12, 0.6], [133.25, 0.8]];
-export const T_PASS = DURATION - 0.5;             // 136.5: the pelican streaks past
+export const T_PASS = DURATION - 1;               // 136: the pelican streaks past; ~0.65 s on the empty seat follow
 const ROW_DUR = 1.1, SEAT_DUR = 0.9;
 export const LAST_FRAME_T = (Math.round(DURATION * FPS) - 1) / FPS;
 

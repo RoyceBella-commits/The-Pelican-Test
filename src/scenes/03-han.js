@@ -955,7 +955,7 @@ const MEMBERS = [
   { id: 'b5', kind: 'bird', X3: -700, y: 442, phase: 1 }, { id: 'b6', kind: 'bird', X3: 1660, y: 438, phase: 0 },
   { id: 'b7', kind: 'bird', X3: -1120, y: 436, phase: 1 },
 ];
-const SLOT_X3 = 452;                     // the empty cartouche gliding in the gap between C and B
+const SLOT_X3 = 452;                     // the label cartouche gliding in the gap between C and B
 const memberX = (m, u) => m.X3 + VP * (u - 3);
 const isChariot = (m) => m.kind === 'parasol' || m.kind === 'axe' || m.kind === 'carriage';
 
@@ -1008,7 +1008,7 @@ function upperKey(f, u) {
   return `${f.kind}:${frz ? 'A' : (b & 1) ? 'B' : 'A'}`;
 }
 
-/** Slot cartouche: blank until 3.5, then 「鹈鹕骑者」 is cut one character per 1/16 note. */
+/** Slot cartouche: absent until 3.5, then its frame and 「鹈鹕骑者」 are cut together, one character per 1/16 note. */
 const slotChars = (u) => (u < 3.5 ? 0 : Math.min(4, 1 + Math.floor((u - 3.5) / 0.0625 + 1e-6)));
 
 function drawCartouche(C, K, text, nShow, size) {
@@ -1268,7 +1268,7 @@ export default {
       if (m.label) spr(`label:${m.label}`, X - 4, LABEL_BOTTOM);
     }
     const sx = SLOT_X3 + VP * (u - 3);
-    spr(`slot:${slotChars(u)}`, sx, SLOT_BOTTOM);
+    if (slotChars(u) > 0) spr(`slot:${slotChars(u)}`, sx, SLOT_BOTTOM);   // no empty frame before the text is cut
     // stone chips flick off each character as it is cut (3.5, 3.5625, 3.625, 3.6875)
     if (u >= 3.5 && u < 3.95) {
       noStroke();
