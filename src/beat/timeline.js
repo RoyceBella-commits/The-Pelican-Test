@@ -1,7 +1,7 @@
 // The single source of truth for timing and world geometry.
 // Shared by the picture (src/main), the scenes, the audio score and the tools.
 
-export const FPS = 30;
+export const FPS = 60;
 export const BPM = 120;
 export const BEAT = 60 / BPM;          // 0.5 s
 export const BAR = 4 * BEAT;           // 2 s
@@ -12,7 +12,7 @@ export const N_SCENES = 20;
 export const OUTRO = 6 * BAR;          // 12 s
 export const OUTRO_START = INTRO + N_SCENES * SCENE_DUR;  // 125
 export const DURATION = OUTRO_START + OUTRO;              // 137
-export const FRAMES = Math.round(DURATION * FPS);         // 4110
+export const FRAMES = Math.round(DURATION * FPS);         // 8220
 
 // Downbeats sit on odd seconds (1, 3, 5, ...): the intro starts with a half-bar pickup.
 export const DOWNBEAT0 = 1;

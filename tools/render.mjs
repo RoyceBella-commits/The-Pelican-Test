@@ -11,7 +11,7 @@ import { startServer, ROOT } from './server.mjs';
 import { launch, openPage } from './lib/browser.mjs';
 import { parseArgs } from './lib/args.mjs';
 
-const FPS = 30, FRAMES = 4110;
+import { FPS, FRAMES } from '../src/beat/timeline.js';
 const a = parseArgs(process.argv.slice(2));
 const draft = !!a.draft;
 const from = +(a.from ?? 0), to = Math.min(FRAMES - 1, +(a.to ?? FRAMES - 1));

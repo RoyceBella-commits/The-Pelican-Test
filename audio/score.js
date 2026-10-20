@@ -81,7 +81,7 @@ function makeE(ctx, mainBus, at, range, i, scene, gain = 1) {
   const live = (beat, len) => { const t = t0 + beat * TL.BEAT; return t + len * TL.BEAT + 3 >= range.from && t <= range.to; };
   const cues = (scene?.cues || []).map((c) => ({ ...c, beat: c.u / TL.BEAT }));
   const E = {
-    ctx, bus, t0, phrase, T,
+    ctx, bus, t0, phrase, T, range,
     notes: THEME[phrase],
     play(inst, dest, beat, len, midi, vel = 0.8, o = {}) {
       if (!live(beat, len)) return;
@@ -112,14 +112,15 @@ function makeE(ctx, mainBus, at, range, i, scene, gain = 1) {
   return E;
 }
 
-function panels(ctx, bus, at, range, scenes, levels) {
+async function panels(ctx, bus, at, range, scenes, levels, eras) {
   for (let i = 0; i < TL.N_SCENES; i++) {
     const t0 = TL.sceneStart(i);
     if (t0 > range.to || t0 + TL.SCENE_DUR + 4 < range.from) continue;
     const sc = scenes[i] || {};
+    if (eras && !eras.includes(sc.id)) continue;
     const era = ERAS[sc.id];
     if (!era) continue;
-    era(makeE(ctx, bus, at, range, i, sc, opts_levels(levels, sc.id)));
+    await era(makeE(ctx, bus, at, range, i, sc, opts_levels(levels, sc.id)));   // an era may render material first (async)
   }
 }
 
@@ -183,7 +184,7 @@ export async function buildScore(ctx, bus, opts = {}) {
   if (want('intro')) intro(ctx, bus, at, range);
   let levels = opts.levels;
   if (levels === undefined) { try { levels = await (await fetch(new URL('./levels.json', import.meta.url))).json(); } catch { levels = null; } }
-  if (want('panels')) panels(ctx, bus, at, range, scenes, levels);
+  if (want('panels')) await panels(ctx, bus, at, range, scenes, levels, opts.eras);
   if (want('outro')) outro(ctx, bus, at, range);
   // final fade: silent on the last frame
   const end = TL.DURATION - range.from;

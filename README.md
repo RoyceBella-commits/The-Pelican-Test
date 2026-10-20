@@ -21,7 +21,7 @@ npm run dev                       # http://127.0.0.1:5180/  preview page (live r
 |---|---|
 | `node tools/shot.mjs --t 5,11` | stills at film times (`--solo <id> --u 1,3`, `--scene <id>`, `--seam <id>`, `--debug`) |
 | `node tools/sheet.mjs --film` | contact sheet, one frame per second (`--scene <id>`, `--solo <id>`) |
-| `node tools/render.mjs [--draft]` | render all 4110 frames (6 Chrome workers; `--from/--to`, `--resume`) |
+| `node tools/render.mjs [--draft]` | render all frames (8220 at 60 fps; 6 Chrome workers; `--from/--to`, `--resume`) |
 | `node tools/encode.mjs [--draft]` | frames (+ `audio/mix.wav`) → `out/*.mp4` |
 | `node tools/check.mjs` | banned APIs, ride/seam contracts, crossing table, determinism |
 | `node tools/audio.mjs` | render the score → `audio/mix.wav` (`--only bell` for sync checks) |
@@ -45,13 +45,15 @@ audio/        Web Audio score: theme, per-era arrangements, synthesised instrume
 
 ## Timeline
 
-120 BPM, one bar = 2 s, 30 fps. Intro 0–5 s, panel *i* (1–20) starts at 5 + 6(i−1) s on a downbeat
-(frame 150 + 180(i−1)), outro 125–137 s. 4110 frames.
+120 BPM, one bar = 2 s, 60 fps (`FPS` in `src/beat/timeline.js`; the tools follow it). Intro 0–5 s, panel *i* (1–20)
+starts at 5 + 6(i−1) s on a downbeat (frame 300 + 360(i−1)), outro 125–137 s. 8220 frames.
 
 Outro: the scroll folds into a 7×3 wall — the 20 panels plus an empty press-conference seat (「鹈鹕（本人）」).
 「截至目前，人类共提交了 20 份答卷。」 · the camera pushes in through camera flashes · 「鹈鹕本人对此尚未发表评论。」 ·
 the pelican streaks past behind the seat with one bell, and the film holds on the empty chair.
 
-Final render: `node tools/render.mjs && node tools/audio.mjs && node tools/encode.mjs` → `out/pelican-test_1080p.mp4`.
+Final render: `node tools/render.mjs && node tools/audio.mjs && node tools/encode.mjs` → `out/pelican-test_1080p60.mp4`
+(at 30 fps the name has no suffix). Panel 18's music is a slowed 80s mall tape, synthesised and then played back
+at 0.7937× (`audio/tape.js`); the mix is shifted 12 ms early to cancel the master compressors' look-ahead.
 
 See `THIRD_PARTY_NOTICES.md` for licenses.

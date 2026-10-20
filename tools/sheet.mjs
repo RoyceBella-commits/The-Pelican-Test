@@ -15,7 +15,7 @@ import { launch, openPage } from './lib/browser.mjs';
 import { parseArgs } from './lib/args.mjs';
 
 const a = parseArgs(process.argv.slice(2));
-const FPS = 30;
+import { FPS } from '../src/beat/timeline.js';
 let items = [];   // { t?, solo?, u?, label }
 let name = 'sheet';
 let cols = +(a.cols ?? 6);

@@ -3,6 +3,8 @@
 //   node tools/audio.mjs                 full mix
 //   node tools/audio.mjs --only bell --out work/bell.wav     a single layer (sync checks)
 //   node tools/audio.mjs --from 0 --to 20
+//   node tools/audio.mjs --only panels --eras vapor --out work/vapor.wav   one panel's arrangement alone
+//   add --tape-clicks to replace the vaporwave tape's music by one click per beat (sync test)
 import fs from 'node:fs';
 import path from 'node:path';
 import { startServer, ROOT } from './server.mjs';
@@ -17,16 +19,17 @@ try {
   const { page } = await openPage(browser, `${srv.url}/film.html`);
   const t0 = Date.now();
   const info = await page.evaluate(async (o) => {
+    if (o.clicks) globalThis.__tapeClicks = true;
     const { renderScore } = await import('/audio/engine.js');
     const { wavBytes } = await import('/audio/dsp.js');
-    const buf = await renderScore({ from: o.from, to: o.to, only: o.only, scenes: window.film.scenes });
+    const buf = await renderScore({ from: o.from, to: o.to, only: o.only, eras: o.eras, scenes: window.film.scenes });
     const bytes = wavBytes(buf);
     // peak / rms for the report
     let peak = 0, sum = 0; const d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; sum += d[i] * d[i]; }
     window.__wav = bytes;
     return { len: bytes.length, seconds: buf.duration, peak, rms: Math.sqrt(sum / d.length) };
-  }, { from: a.from != null ? +a.from : undefined, to: a.to != null ? +a.to : undefined, only: a.only ? String(a.only).split(',') : undefined });
+  }, { from: a.from != null ? +a.from : undefined, to: a.to != null ? +a.to : undefined, only: a.only ? String(a.only).split(',') : undefined, eras: a.eras ? String(a.eras).split(',') : undefined, clicks: !!a['tape-clicks'] });
   // pull the bytes in chunks (one huge evaluate result is fragile)
   const CH = 4 * 1024 * 1024;
   const parts = [];

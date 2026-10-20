@@ -11,6 +11,7 @@ import { startServer, ROOT } from './server.mjs';
 import { launch, openPage } from './lib/browser.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { rng } from '../src/kit/math.js';
+import * as TL from '../src/beat/timeline.js';
 
 const a = parseArgs(process.argv.slice(2));
 let failed = false;
@@ -56,11 +57,11 @@ if (!a.quick) {
   console.log('3. determinism');
   const R = rng('check');
   const frames = new Set();
-  for (let i = 0; i < 20; i++) { const f = 150 + 180 * i; frames.add(f - 1); frames.add(f); frames.add(f + 1); }
-  while (frames.size < +(a.frames ?? 80)) frames.add(Math.floor(R() * 4110));
+  for (let i = 0; i < 20; i++) { const f = Math.round(TL.sceneStart(i) * TL.FPS); frames.add(f - 1); frames.add(f); frames.add(f + 1); }
+  while (frames.size < +(a.frames ?? 80)) frames.add(Math.floor(R() * TL.FRAMES));
   const list = [...frames].sort((x, y) => x - y);
   const shot = async (page, f) => {
-    await page.evaluate((t) => window.renderAt(t), f / 30);
+    await page.evaluate((t) => window.renderAt(t), f / TL.FPS);
     const buf = await page.screenshot({ type: 'png' });
     return crypto.createHash('sha1').update(buf).digest('hex');
   };

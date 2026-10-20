@@ -393,3 +393,35 @@ export function chipNoise(p = {}) {
     return t + D;
   };
 }
+
+// ------------------------------------------------------------------ FM lead (80s "sax")
+/** Two-operator FM lead with a brassy index swell, delayed vibrato and breath noise. opts.slideFrom: scoop into the note. */
+export function fmLead(p = {}) {
+  return (ctx, out, t, midi, dur, vel = 0.8, o = {}) => {
+    const oct = (p.octave ?? 0) * 12, f = mtof(midi + oct), ratio = p.ratio ?? 1;
+    const dest = panned(ctx, out, o.pan ?? p.pan ?? 0);
+    const rel = p.release ?? 0.12, stop = t + dur + rel * 3 + 0.05;
+    const car = osc(ctx, 'sine', f, t, stop), mod = osc(ctx, 'sine', f * ratio, t, stop);
+    if (o.slideFrom != null) {
+      const f0 = mtof(o.slideFrom + oct), st = o.slideTime ?? 0.09;
+      car.frequency.setValueAtTime(f0, t); car.frequency.exponentialRampToValueAtTime(f, t + st);
+      mod.frequency.setValueAtTime(f0 * ratio, t); mod.frequency.exponentialRampToValueAtTime(f * ratio, t + st);
+    }
+    const I0 = f * (p.index ?? 1.8), mg = gain(ctx, 0);
+    mg.gain.setValueAtTime(I0 * 0.3, t); mg.gain.linearRampToValueAtTime(I0 * (0.7 + 0.6 * vel), t + 0.05);
+    mg.gain.linearRampToValueAtTime(I0 * 0.75, t + 0.25); mg.gain.setTargetAtTime(0, t + dur, rel / 3);
+    mod.connect(mg).connect(car.frequency);
+    const vib = osc(ctx, 'sine', p.vibRate ?? 5.2, t, stop), vg = gain(ctx, 0);
+    vg.gain.setValueAtTime(0, t + Math.min(dur * 0.4, 0.25)); vg.gain.linearRampToValueAtTime(f * (p.vib ?? 0.009), t + Math.min(dur, 0.7));
+    vib.connect(vg).connect(car.frequency);
+    const lp = filt(ctx, 'lowpass', p.lp ?? 3200, 0.8), g = gain(ctx, 0);
+    const end = adsr(g.gain, t, dur, { a: p.attack ?? 0.035, d: 0.2, s: 0.8, r: rel, peak: vel * (p.level ?? 0.08) });
+    car.connect(lp).connect(g).connect(dest);
+    const n = ctx.createBufferSource(); n.buffer = noiseBuffer(ctx, 1, 29); n.loop = true;
+    const bp = filt(ctx, 'bandpass', Math.min(6000, f * 2.5), 1.2), ng = gain(ctx, 0), b = p.breath ?? 0.02;
+    ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(vel * b, t + 0.03); ng.gain.setTargetAtTime(vel * b * 0.35, t + 0.05, 0.1);
+    ng.gain.setTargetAtTime(0, t + dur, rel / 3);
+    n.connect(bp).connect(ng).connect(dest); n.start(t); n.stop(stop);
+    return end;
+  };
+}

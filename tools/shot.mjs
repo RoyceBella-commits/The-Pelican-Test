@@ -13,6 +13,7 @@ import path from 'node:path';
 import { startServer, ROOT } from './server.mjs';
 import { launch, openPage } from './lib/browser.mjs';
 import { parseArgs, nums } from './lib/args.mjs';
+import { FPS } from '../src/beat/timeline.js';
 
 const a = parseArgs(process.argv.slice(2));
 const outDir = path.resolve(ROOT, a.out || 'work/shots');
@@ -21,7 +22,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const jobs = [];
 const idOf = (s) => s;
 if (a.t) for (const t of nums(a.t)) jobs.push({ kind: 'film', t, label: `t${t.toFixed(2)}` });
-if (a.f) for (const f of nums(a.f)) jobs.push({ kind: 'film', t: f / 30, label: `f${String(f).padStart(5, '0')}` });
+if (a.f) for (const f of nums(a.f)) jobs.push({ kind: 'film', t: f / FPS, label: `f${String(f).padStart(5, '0')}` });
 if (a.solo) for (const u of nums(a.u ?? '0.5,3,5.5')) jobs.push({ kind: 'solo', id: idOf(a.solo), u, label: `${a.solo}_solo_u${u.toFixed(2)}` });
 if (a.scene) for (const u of nums(a.u ?? '0,1,2,3,4,5')) jobs.push({ kind: 'scene', id: a.scene, u, label: `${a.scene}_u${u.toFixed(2)}` });
 if (a.seam) for (const u of [-0.5, 0, 0.5, 5.5, 6, 6.5]) jobs.push({ kind: 'scene', id: a.seam, u, label: `${a.seam}_seam_u${u.toFixed(2)}` });

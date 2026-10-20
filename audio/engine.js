@@ -5,6 +5,7 @@ import { DURATION } from '../src/beat/timeline.js';
 import { reverbIR } from './dsp.js';
 
 export const SR = 48000;
+export const BUS_LATENCY = 0.012;   // 2 × DynamicsCompressor look-ahead (6 ms each in Chromium)
 
 /** Master bus: dry + reverb sends → bus compressor → soft limiter → destination. */
 export function makeBus(ctx) {
@@ -35,11 +36,16 @@ export function makeBus(ctx) {
  */
 export async function renderScore(opts = {}) {
   const from = opts.from ?? 0, to = opts.to ?? DURATION;
-  const ctx = new OfflineAudioContext(2, Math.ceil((to - from) * SR), SR);
+  // the bus's two compressors each look ahead 6 ms (Chromium), so the mix comes out 12 ms late:
+  // render that much longer and drop it from the start, so every event sounds exactly on its frame
+  const LAT = Math.round(BUS_LATENCY * SR), N = Math.ceil((to - from) * SR);
+  const ctx = new OfflineAudioContext(2, N + LAT, SR);
   const bus = makeBus(ctx);
   const { buildScore } = await import('./score.js');
-  await buildScore(ctx, bus, { from, to, only: opts.only, scenes: opts.scenes, levels: opts.levels });
-  const buf = await ctx.startRendering();
+  await buildScore(ctx, bus, { from, to, only: opts.only, eras: opts.eras, scenes: opts.scenes, levels: opts.levels });
+  const raw = await ctx.startRendering();
+  const buf = new AudioBuffer({ length: N, numberOfChannels: 2, sampleRate: SR });
+  for (let c = 0; c < 2; c++) buf.copyToChannel(raw.getChannelData(c).subarray(LAT, LAT + N), c);
   // deterministic peak normalisation to −1 dBFS (full renders only; partial renders keep raw level)
   if (opts.normalize !== false && from === 0 && to === DURATION) {
     let peak = 0;

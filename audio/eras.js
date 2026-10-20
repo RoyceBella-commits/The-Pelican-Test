@@ -5,6 +5,7 @@
 // era(ctx, bus, E) where E = { t0, phrase, play(inst, dest, beat, lenBeats, midi, vel, opts), notes, cue(name) → u, at(t), lvl }
 import * as I from './instruments.js';
 import { mtof, noiseBuffer, panned } from './dsp.js';
+import { vaporTape } from './tape.js';
 
 // ------------------------------------------------------------------ scale maps
 const pc = (m) => ((Math.round(m) - 62) % 12 + 12) % 12;
@@ -358,16 +359,8 @@ export const ERAS = {
     E.on('nudge', (b) => { const t = E.T(b); const o = E.ctx.createOscillator(); o.type = 'square'; o.frequency.value = 70; const g = E.ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.setValueAtTime(0.06, t + 0.28); g.gain.linearRampToValueAtTime(0, t + 0.32); o.connect(g).connect(E.bus.input); o.start(t); o.stop(t + 0.35); });
   },
   vapor(E) {
-    // the theme slowed 0.75× and pitched down, drowned in reverb; snaps back at the crossing
-    E.melody(V.epiano, E.bus.hall, { vel: 0.9, speed: 0.75, transpose: -5 });
-    E.melody(V.pad, E.bus.hall, { vel: 0.6, speed: 0.75, transpose: -17 });
-    each(2, 12, 4, (b) => E.play(V.snare, E.bus.hall, b, 0.3, 60, 0.6));
-    each(0, 12, 4, (b) => E.play(V.kick808, E.bus.input, b, 0.4, 60, 0.4));
-    E.on('speedUp', (b) => slide(E.ctx, E.bus.room, E.T(b), 0.5, 45, 57, 0.06, 'sawtooth'));
-    E.on('glitch', (b) => each(0, 0.5, 0.0625, (k) => E.play(V.hat, E.bus.input, b + k, 0.03, 60, 0.9)));
-    E.on('bustTurns', (b) => E.play(V.pad, E.bus.hall, b, 2, 69, 0.5));
-    E.on('wave', (b) => gliss(E, V.celesta, E.bus.hall, b, run(69, 6), 0.125, 0.45));
-    E.on('glow', (b) => chord(E, V.celesta, E.bus.hall, b, 1, [90, 97], 0.5));
+    // a slowed-down 80s mall tape (audio/tape.js): slows in, skips in bar 2, speeds out on the crossing
+    return vaporTape(E);
   },
   shorts(E) {
     E.melody(V.pluck, E.bus.room, { vel: 0.95, octave: 1 });
